@@ -1,4 +1,4 @@
-package br.com.hyteck.school_control.usecases.users;
+package br.com.hyteck.school_control.usecases.user;
 
 import br.com.hyteck.school_control.repositories.UserRepository;
 import org.springframework.security.core.userdetails.UserDetails;

@@ -19,7 +19,7 @@ public record ResponsibleRequest(
         @Email
         String email,
 
-        @NotBlank(message = "{responsible.phone.notblank}")
+        @NotBlank
         String phone,
 
         @CPF

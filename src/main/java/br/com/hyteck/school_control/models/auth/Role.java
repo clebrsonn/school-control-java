@@ -1,4 +1,4 @@
-package br.com.hyteck.school_control.models;
+package br.com.hyteck.school_control.models.auth;
 
 import jakarta.persistence.*;
 import lombok.*;

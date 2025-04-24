@@ -1,5 +1,6 @@
-package br.com.hyteck.school_control.models;
+package br.com.hyteck.school_control.models.auth;
 
+import br.com.hyteck.school_control.models.AbstractModel;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -21,7 +22,7 @@ import java.util.stream.Collectors;
 @Setter // Lombok annotation to generate setters
 @NoArgsConstructor // Lombok annotation for no-args constructor (required by JPA)
 @AllArgsConstructor // Lombok annotation for all-args constructor
-@Builder // Lombok annotation for builder pattern
+@Builder
 public class User extends AbstractModel implements UserDetails {
 
     @Column(unique = true, nullable = false)
@@ -50,9 +51,12 @@ public class User extends AbstractModel implements UserDetails {
     @Builder.Default
     private boolean accountNonLocked = true;
     @Builder.Default
-    private boolean credentialsNonExpired = true;
+    private boolean credentialsNonExpired = false;
     @Builder.Default
-    private boolean enabled = true;
+    private boolean enabled = false;
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private VerificationToken verificationToken;
 
     // --- Timestamps ---
     @CreationTimestamp

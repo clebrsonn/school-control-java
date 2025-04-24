@@ -1,6 +1,6 @@
 package br.com.hyteck.school_control.repositories;
 
-import br.com.hyteck.school_control.models.User;
+import br.com.hyteck.school_control.models.auth.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

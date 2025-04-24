@@ -7,6 +7,7 @@ import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.*; // Adicionar Lombok
+import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDate; // Usar LocalDate para datas sem hora
@@ -18,7 +19,7 @@ import java.time.YearMonth; // Para representar o mês/ano de referência
 @Setter // Lombok
 @NoArgsConstructor // Lombok
 @AllArgsConstructor // Lombok
-@Builder // Lombok
+@SuperBuilder // Lombok
 public class Invoice extends AbstractModel {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false) // Uma fatura pertence a uma matrícula

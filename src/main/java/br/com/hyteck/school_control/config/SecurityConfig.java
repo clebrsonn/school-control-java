@@ -5,9 +5,8 @@ import br.com.hyteck.school_control.config.jwt.provider.JWTProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.Customizer;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -46,22 +45,32 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // Desabilitar CSRF (Cross-Site Request Forgery) - Comum para APIs REST stateless
-                // Se sua aplicação usa sessões e formulários web, reavalie a necessidade de CSRF.
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement((session) -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                // Configurar autorização para as requisições HTTP
                 .authorizeHttpRequests(auth -> auth
                         // Permitir acesso público a endpoints específicos (ex: documentação, login)
                         // .requestMatchers("/public/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                        .requestMatchers("/", "/authenticate").permitAll()
-                        .anyRequest()
+                        .requestMatchers(HttpMethod.POST, "/users").permitAll()
+                        .requestMatchers("/auth/login", "/auth/verify").permitAll()
+                        .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtRequestFilter(tokenProvider, userDetailsService), UsernamePasswordAuthenticationFilter.class);
-
-                // Configurar o método de autenticação
-                // .httpBasic(Customizer.withDefaults()); // Habilita HTTP Basic Auth (popup no browser/cliente)
-
+                .addFilterBefore(jwtRequestFilter(tokenProvider, userDetailsService), UsernamePasswordAuthenticationFilter.class)
+                .exceptionHandling(exceptionHandling -> exceptionHandling
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setContentType("application/json");
+                            response.setStatus(HttpStatus.UNAUTHORIZED.value());
+                            response.getWriter().write(
+                                    "{ \"error\": \"Unauthorized\", \"message\": "+ authException.getMessage() +" }"
+                            );
+                        })
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            response.setContentType("application/json");
+                            response.setStatus(HttpStatus.FORBIDDEN.value());
+                            response.getWriter().write(
+                                    "{ \"error\": \"Forbidden\", \"message\": "+ accessDeniedException.getMessage() +" }"
+                            );
+                        })
+                );
         return http.build();
     }
 

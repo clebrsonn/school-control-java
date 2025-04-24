@@ -5,6 +5,7 @@ import br.com.hyteck.school_control.models.AbstractModel;
 import br.com.hyteck.school_control.repositories.EnrollmentRepository;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,7 +16,7 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 public class ClassRoom extends AbstractModel {
     private String name;
     @OneToMany(mappedBy = "classroom", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
