@@ -49,7 +49,7 @@ public class SecurityConfig {
                 .sessionManagement((session) -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         // Permitir acesso público a endpoints específicos (ex: documentação, login)
-                        // .requestMatchers("/public/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/users").permitAll()
                         .requestMatchers("/auth/login", "/auth/verify").permitAll()
                         .anyRequest().authenticated()
