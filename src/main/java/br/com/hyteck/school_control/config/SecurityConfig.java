@@ -11,6 +11,7 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -19,7 +20,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
-@EnableWebSecurity // Habilita a configuração de segurança web do Spring Security
+@EnableWebSecurity 
 public class SecurityConfig {
 
     private final JWTProvider tokenProvider;
@@ -32,8 +33,8 @@ public class SecurityConfig {
 
 
     public static final String[] ENDPOINTS_WITH_AUTHENTICATION_NOT_REQUIRED = {
-            "/users/login", //url que usaremos para fazer login
-            "/users" //url que usaremos para criar um usuário
+            "/users/login", 
+            "/users" 
     };
 
     @Bean
@@ -41,14 +42,22 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    // --- Bean para Configurar as Regras de Segurança HTTP ---
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement((session) -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .headers(headers -> headers
+                    .httpStrictTransportSecurity(hsts -> hsts
+                        .includeSubDomains(true)
+                        .preload(true)
+                        .maxAgeInSeconds(31536000))
+                    .contentSecurityPolicy(csp -> csp
+                        .policyDirectives("default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"))
+                    .frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin)
+//                    .xssProtection(xss -> xss.enabled(true).block(true))
+                )
                 .authorizeHttpRequests(auth -> auth
-                        // Permitir acesso público a endpoints específicos (ex: documentação, login)
                          .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/users").permitAll()
                         .requestMatchers("/auth/login", "/auth/verify").permitAll()
@@ -79,21 +88,9 @@ public class SecurityConfig {
         return new JwtAuthenticationFilter(jwtUserDetailsService, userDetailsService);
     }
 
-//
-//    @Bean
-//    public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
-//        return http.getSharedObject(AuthenticationManagerBuilder.class)
-//                .userDetailsService(userDetailsService)
-//                .passwordEncoder(passwordEncoder())
-//                .and()
-//                .build();
-//    }
-
     @Bean
     public AuthenticationManager authenticationManager(
             final AuthenticationConfiguration authenticationConfiguration) throws Exception {
         return authenticationConfiguration.getAuthenticationManager();
     }
-
-
 }
