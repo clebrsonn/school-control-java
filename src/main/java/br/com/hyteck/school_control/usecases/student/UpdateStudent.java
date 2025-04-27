@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
+import java.time.LocalDate;
 import java.util.Objects; // Importar Objects para comparação segura
 
 @Service
@@ -64,6 +65,14 @@ public class UpdateStudent {
     /**
      * Verifica se o novo CPF ou Email já existem para OUTRO estudante.
      */
+    private void validateEnrollmentPeriod() {
+        LocalDate now = LocalDate.now();
+        if (now.isBefore(LocalDate.of(now.getYear(), 1, 1)) || 
+            now.isAfter(LocalDate.of(now.getYear(), 2, 15))) {
+            throw new IllegalStateException("Fora do período de matrículas");
+        }
+    }
+
     private void checkDuplicates(StudentRequest requestDTO, Student existingStudent) {
         // Verifica CPF apenas se foi alterado
 //        if (!Objects.equals(requestDTO.cpf(), existingStudent.getCpf())) {

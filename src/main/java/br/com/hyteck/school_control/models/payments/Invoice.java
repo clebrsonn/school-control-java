@@ -19,8 +19,10 @@ import java.time.YearMonth; // Para representar o mês/ano de referência
 @Setter // Lombok
 @NoArgsConstructor // Lombok
 @AllArgsConstructor // Lombok
-@SuperBuilder // Lombok
+@SuperBuilder
 public class Invoice extends AbstractModel {
+    private int installments;
+    private int currentInstallment;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false) // Uma fatura pertence a uma matrícula
     @JoinColumn(name = "enrollment_id", nullable = false) // Coluna da FK

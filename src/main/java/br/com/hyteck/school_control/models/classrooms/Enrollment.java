@@ -18,8 +18,18 @@ import java.util.List; // Usar List
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-@SuperBuilder // Adicionar Builder
+@SuperBuilder
 public class Enrollment extends AbstractModel {
+    public enum Status {
+        ACTIVE,
+        PENDING,
+        CANCELLED,
+        TRANSFERRED
+    }
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private Status status;
 
     @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.PERSIST) // Ajustar cascade conforme necessidade
     @JoinColumn(name = "classroom_id", nullable = false) // Adicionar JoinColumn

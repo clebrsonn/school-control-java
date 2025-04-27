@@ -1,28 +1,30 @@
 package br.com.hyteck.school_control.models.expenses;
 
+import br.com.hyteck.school_control.models.AbstractModel;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import lombok.Getter;
+import lombok.Setter;
 
-import java.time.LocalDateTime;
-import java.util.Currency;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Entity
-public class Expense {
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Id
-    private String id;
+@Getter
+@Setter
+public class Expense extends AbstractModel {
 
-    private Currency total;
+    @NotNull
+    private BigDecimal value;
 
-    @NotBlank
-    private LocalDateTime date;
+    @NotNull
+    private LocalDate date;
 
-    @NotBlank
+    @NotNull
     private String description;
-    @NotBlank
-    private String receiptUrl;
 
+    private String receiptUrl;
 }

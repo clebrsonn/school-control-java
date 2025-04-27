@@ -5,7 +5,8 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PastOrPresent;
 import jakarta.validation.constraints.Positive;
-import lombok.*; // Adicionar Lombok
+import lombok.*;
+import br.com.hyteck.school_control.models.payments.PaymentMethod;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime; // Pode manter LocalDateTime se a hora do pagamento for importante
@@ -35,13 +36,13 @@ public class Payment extends AbstractModel {
     @Column(nullable = false)
     private LocalDateTime paymentDate; // Data e hora do pagamento
 
-//    @Enumerated(EnumType.STRING)
-//    @Column(length = 50)
-//    private PaymentMethod paymentMethod; // Forma de pagamento (PIX, Boleto, Cartão)
-
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
     private PaymentStatus status; // Status do pagamento (COMPLETED, FAILED, PENDING)
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 50)
+    private PaymentMethod paymentMethod; // Forma de pagamento (PIX, Boleto, Cartão)
 
     private String transactionId; // ID da transação (gateway de pagamento, etc.)
     private String description; // Descrição/Observação do pagamento
