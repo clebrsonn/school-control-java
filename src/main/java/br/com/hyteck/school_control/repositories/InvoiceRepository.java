@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.Collection;
 import java.util.List;
@@ -27,5 +28,7 @@ public interface InvoiceRepository extends JpaRepository<Invoice, String> {
             @Param("referenceMonth") YearMonth referenceMonth,
             @Param("statuses") Collection<InvoiceStatus> statuses
     );
+
+    List<Invoice> findByStatusAndDueDateBefore(InvoiceStatus status, LocalDate dueDate);
 
 }

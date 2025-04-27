@@ -17,18 +17,40 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+/**
+ * Use case para gerar um extrato consolidado de faturas para um responsável em um mês de referência específico.
+ */
 @Service
 public class GenerateConsolidatedStatementUseCase {
-
+    /**
+     * Repositório para acesso às faturas.
+     */
     private final InvoiceRepository invoiceRepository;
+
+    /**
+     * Repositório para acesso aos responsáveis.
+     */
     private final ResponsibleRepository responsibleRepository; // Injete o repositório
 
+    /**
+     * Construtor da classe GenerateConsolidatedStatementUseCase.
+     *
+     * @param invoiceRepository     Repositório para acesso às faturas.
+     * @param responsibleRepository Repositório para acesso aos responsáveis.
+     */
     public GenerateConsolidatedStatementUseCase(InvoiceRepository invoiceRepository,
                                                 ResponsibleRepository responsibleRepository) {
         this.invoiceRepository = invoiceRepository;
         this.responsibleRepository = responsibleRepository;
     }
 
+    /**
+     * Gera um extrato consolidado de faturas para um responsável em um mês de referência específico.
+     *
+     * @param responsibleId  ID do responsável.
+     * @param referenceMonth Mês de referência para o extrato.
+     * @return Um Optional contendo o extrato consolidado, ou Optional.empty() se não houver faturas pendentes.
+     */
     @Transactional(readOnly = true) // Boa prática para operações de leitura
     public Optional<ConsolidatedStatement> execute(String responsibleId, YearMonth referenceMonth) {
 
@@ -54,7 +76,6 @@ public class GenerateConsolidatedStatementUseCase {
         // 3. Mapear Invoices para DTOs de Linha de Item
         List<StatementLineItem> items = individualInvoices.stream()
                 .map(invoice -> new StatementLineItem(invoice.getId(),
-
                         invoice.getEnrollment().getStudent().getName() // Assumindo que os dados estão carregados (cuidado com LAZY loading)
                         , ("Mensalidade " + invoice.getEnrollment().getClassroom().getName() + " - " + referenceMonth.toString()) // Exemplo
                         , (invoice.getAmount())
@@ -74,12 +95,12 @@ public class GenerateConsolidatedStatementUseCase {
 
         // 5. Montar o DTO Consolidado
         ConsolidatedStatement statement = new ConsolidatedStatement(
-                (responsibleId),
-                (responsible.getName()) // Nome do responsável
-                , (referenceMonth)
-                , (totalAmountDue)
-                , (overallDueDate)
-                , (items)
+                responsibleId,
+                responsible.getName() // Nome do responsável
+                , referenceMonth
+                , totalAmountDue
+                , overallDueDate
+                , items
                 // TODO: Gerar link de pagamento ou código de barras aqui, se aplicável
                 , ""
                 , ""

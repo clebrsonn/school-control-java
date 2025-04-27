@@ -56,4 +56,8 @@ public class Invoice extends AbstractModel {
     // Outros campos úteis: description, discount, penalty, etc.
     private String description;
 
+    @ManyToOne
+    @JoinColumn(name = "responsible_id")
+    private Responsible responsible;
+
 }

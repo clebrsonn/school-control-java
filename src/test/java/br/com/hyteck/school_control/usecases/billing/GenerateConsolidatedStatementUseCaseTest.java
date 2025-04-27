@@ -1,8 +1,8 @@
 package br.com.hyteck.school_control.usecases.billing;
 
-import br.com.hyteck.school_control.models.classrooms.ClassRoom; // Import necessário para mock
-import br.com.hyteck.school_control.models.classrooms.Enrollment; // Import necessário para mock
-import br.com.hyteck.school_control.models.classrooms.Student; // Import necessário para mock
+import br.com.hyteck.school_control.models.classrooms.ClassRoom;
+import br.com.hyteck.school_control.models.classrooms.Enrollment;
+import br.com.hyteck.school_control.models.classrooms.Student;
 import br.com.hyteck.school_control.models.payments.Invoice;
 import br.com.hyteck.school_control.models.payments.InvoiceStatus;
 import br.com.hyteck.school_control.models.payments.Responsible;
@@ -20,16 +20,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime; // Usar LocalDateTime para dueDate
 import java.time.YearMonth;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.assertThat; // Usar AssertJ para assertions mais legíveis
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*; // Import estático para verify, when, etc.
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class) // Habilita a integração do Mockito com JUnit 5
 class GenerateConsolidatedStatementUseCaseTest {
@@ -202,7 +200,55 @@ class GenerateConsolidatedStatementUseCaseTest {
         assertThat(statement.overallDueDate()).isEqualTo(LocalDate.of(2024, 8, 5)); // Data de vencimento de invoice2
     }
 
-    // Você pode adicionar mais testes para cobrir outros cenários, como:
-    // - Faturas com status diferente de PENDING/OVERDUE sendo ignoradas.
-    // - Tratamento de erros se o mapeamento falhar (ex: student ou classroom nulos na fatura, embora o BD não deva permitir).
+    @Test
+    @DisplayName("Deve ignorar faturas com status diferente de PENDING ou OVERDUE")
+    void execute_shouldIgnoreInvoicesWithWrongStatus() {
+        // Arrange
+        Invoice paidInvoice = Invoice.builder()
+                .id("inv-paid")
+                .enrollment(enrollment1)
+                .description("Mensalidade Paga")
+                .amount(new BigDecimal("300.00"))
+                .status(InvoiceStatus.PAID)
+                .referenceMonth(referenceMonth)
+                .build();
+
+        when(responsibleRepository.findById(responsibleId)).thenReturn(Optional.of(responsible));
+        when(invoiceRepository.findPendingInvoicesByResponsibleAndMonth(responsibleId, referenceMonth,
+                List.of(InvoiceStatus.PENDING, InvoiceStatus.OVERDUE)))
+                .thenReturn(List.of(invoice1, paidInvoice));
+
+        // Act
+        Optional<ConsolidatedStatement> result = generateConsolidatedStatementUseCase.execute(responsibleId, referenceMonth);
+
+        // Assert
+        assertThat(result).isPresent();
+        ConsolidatedStatement statement = result.get();
+        assertThat(statement.items()).hasSize(1); // Deve ter apenas a fatura PENDING
+        assertThat(statement.totalAmountDue()).isEqualTo(new BigDecimal("500.00")); // Apenas o valor da fatura PENDING
+    }
+
+    @Test
+    @DisplayName("Deve lançar exceção quando enrollment ou student estiverem nulos")
+    void execute_shouldThrowException_whenInvalidInvoiceData() {
+        // Arrange
+        Invoice invalidInvoice = Invoice.builder()
+                .id("inv-invalid")
+                .enrollment(null) // Enrollment nulo
+                .description("Fatura inválida")
+                .amount(new BigDecimal("100.00"))
+                .status(InvoiceStatus.PENDING)
+                .referenceMonth(referenceMonth)
+                .build();
+
+        when(responsibleRepository.findById(responsibleId)).thenReturn(Optional.of(responsible));
+        when(invoiceRepository.findPendingInvoicesByResponsibleAndMonth(responsibleId, referenceMonth,
+                List.of(InvoiceStatus.PENDING, InvoiceStatus.OVERDUE)))
+                .thenReturn(List.of(invoice1, invalidInvoice));
+
+        // Act & Assert
+        assertThatThrownBy(() -> generateConsolidatedStatementUseCase.execute(responsibleId, referenceMonth))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Fatura inválida");
+    }
 }

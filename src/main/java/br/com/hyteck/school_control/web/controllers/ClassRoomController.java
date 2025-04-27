@@ -26,7 +26,7 @@ public class ClassRoomController {
     private final FindClassRooms findAllClassRooms;
     private final UpdateClassRoom updateClassRoom;
     private final DeleteClassRoom deleteClassRoom;
-    private final FindEnrollmentsByClassRoomId findEnrollmentsByClassRoomIdUseCase; // Injetar o novo Use Case
+    private final FindEnrollmentsByClassRoomId findEnrollmentsByClassRoomIdUseCase;
 
     public ClassRoomController(CreateClassRoom createClassRoom,
                                FindClassRoomById findClassRoomById,
