@@ -21,6 +21,9 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.util.StringUtils; // Para verificar senha
 import org.springframework.validation.annotation.Validated;
 
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -35,7 +38,6 @@ public class CreateUser {
 
     private final VerificationTokenRepository tokenRepository;
     private final EmailService emailService; // Injetar EmailService
-
 
     public CreateUser(UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder, VerificationTokenRepository tokenRepository, EmailService emailService) {
         this.userRepository = userRepository;
@@ -64,7 +66,7 @@ public class CreateUser {
         // }
 
         // 3. Validar e buscar Roles
-        Set<Role> roles = findAndValidateRoles(requestDTO.roles());
+        Set<Role> roles = findAndValidateRoles(Set.of("ROLE_USER"));
 
         // 4. Mapear DTO para Entidade
         User userToSave = User.builder()
@@ -102,11 +104,7 @@ public class CreateUser {
     }
 
     private Set<Role> findAndValidateRoles(Set<String> roleNames) {
-        if (roleNames == null || roleNames.isEmpty()) {
-            throw new IllegalArgumentException("Pelo menos uma role deve ser fornecida."); // Ou BusinessRuleException
-        }
         Set<Role> foundRoles = roleRepository.findByNameIn(roleNames);
-        logger.debug("roles", foundRoles);
         if (foundRoles.size() != roleNames.size()) {
             Set<String> foundRoleNames = foundRoles.stream().map(Role::getName).collect(Collectors.toSet());
             Set<String> missingRoles = roleNames.stream()

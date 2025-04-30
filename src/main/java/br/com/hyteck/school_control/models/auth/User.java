@@ -112,4 +112,25 @@ public class User extends AbstractModel implements UserDetails {
     public int hashCode() {
         return id != null ? id.hashCode() : 0;
     }
+
+//    public void setRoles(Set<String> roles) {
+//
+//        this.roles = findAndValidateRoles(roles);;
+//    }
+//
+//    private Set<Role> findAndValidateRoles(Set<String> roleNames) {
+//        if (roleNames == null || roleNames.isEmpty()) {
+//            throw new IllegalArgumentException("Pelo menos uma role deve ser fornecida.");
+//        }
+//        Set<Role> foundRoles = roleRepository.findByNameIn(roleNames);
+//        if (foundRoles.size() != roleNames.size()) {
+//            Set<String> foundRoleNames = foundRoles.stream().map(Role::getName).collect(Collectors.toSet());
+//            Set<String> missingRoles = roleNames.stream()
+//                    .filter(name -> !foundRoleNames.contains(name))
+//                    .collect(Collectors.toSet());
+//            throw new ResourceNotFoundException("Roles não encontradas: " + missingRoles);
+//        }
+//        return foundRoles;
+//    }
+
 }

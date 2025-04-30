@@ -19,6 +19,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+/**
+ * Configuração de segurança do aplicativo.
+ *
+ * @author Cleberson Chagas
+ * @version 1.0
+ * @since 2023-03-01
+ */
 @Configuration
 @EnableWebSecurity 
 public class SecurityConfig {
@@ -30,12 +37,6 @@ public class SecurityConfig {
         this.tokenProvider = tokenProvider;
         this.userDetailsService = userDetailsService;
     }
-
-
-    public static final String[] ENDPOINTS_WITH_AUTHENTICATION_NOT_REQUIRED = {
-            "/users/login", 
-            "/users" 
-    };
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -55,7 +56,6 @@ public class SecurityConfig {
                     .contentSecurityPolicy(csp -> csp
                         .policyDirectives("default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"))
                     .frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin)
-//                    .xssProtection(xss -> xss.enabled(true).block(true))
                 )
                 .authorizeHttpRequests(auth -> auth
                          .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()

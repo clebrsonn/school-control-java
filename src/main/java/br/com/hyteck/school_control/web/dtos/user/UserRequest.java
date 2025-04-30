@@ -2,10 +2,7 @@ package br.com.hyteck.school_control.web.dtos.user;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
-
-import java.util.Set;
 
 /**
  * DTO para criar ou atualizar um usuário.
@@ -23,9 +20,5 @@ public record UserRequest(
         @NotBlank
         @Email
         @Size(max = 100)
-        String email,
-
-        @NotEmpty
-        Set<String> roles // Nomes das roles (ex: "ROLE_ADMIN", "ROLE_USER")
-) {
+        String email) {
 }

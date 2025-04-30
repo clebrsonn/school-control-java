@@ -47,12 +47,10 @@ public class UpdateUser {
         checkDuplicates(requestDTO, existingUser);
 
         // 3. Validar e buscar Roles
-        Set<Role> roles = findAndValidateRoles(requestDTO.roles());
-
         // 4. Atualizar dados da entidade
         existingUser.setUsername(requestDTO.username());
         existingUser.setEmail(requestDTO.email());
-        existingUser.setRoles(roles);
+//        existingUser.setRoles(roles);
 
         // NÃO atualize a senha aqui por padrão.
         // Se uma senha foi fornecida no DTO, pode ser um erro ou exigir um fluxo diferente.
@@ -90,18 +88,4 @@ public class UpdateUser {
         // }
     }
 
-    private Set<Role> findAndValidateRoles(Set<String> roleNames) {
-        if (roleNames == null || roleNames.isEmpty()) {
-            throw new IllegalArgumentException("Pelo menos uma role deve ser fornecida.");
-        }
-        Set<Role> foundRoles = roleRepository.findByNameIn(roleNames);
-        if (foundRoles.size() != roleNames.size()) {
-            Set<String> foundRoleNames = foundRoles.stream().map(Role::getName).collect(Collectors.toSet());
-            Set<String> missingRoles = roleNames.stream()
-                    .filter(name -> !foundRoleNames.contains(name))
-                    .collect(Collectors.toSet());
-            throw new ResourceNotFoundException("Roles não encontradas: " + missingRoles);
-        }
-        return foundRoles;
-    }
 }

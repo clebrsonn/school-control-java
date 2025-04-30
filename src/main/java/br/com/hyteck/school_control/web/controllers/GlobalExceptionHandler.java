@@ -1,18 +1,18 @@
-package br.com.hyteck.school_control.web.controllers; // Ou outro pacote
+package br.com.hyteck.school_control.web.controllers;
 
 import br.com.hyteck.school_control.exceptions.DuplicateResourceException;
 import br.com.hyteck.school_control.exceptions.ResourceNotFoundException;
 import br.com.hyteck.school_control.web.dtos.error.ApiErrorResponse;
-import jakarta.servlet.http.HttpServletRequest; // Para pegar o path
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.AccessDeniedException; // Segurança
-import org.springframework.security.authentication.BadCredentialsException; // Segurança
-import org.springframework.security.authentication.DisabledException; // Segurança
-import org.springframework.validation.FieldError; // Para erros de validação
-import org.springframework.web.bind.MethodArgumentNotValidException; // Validação de @RequestBody
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -25,7 +25,6 @@ public class GlobalExceptionHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-    // --- Erros de Validação ---
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> handleValidationExceptions(
             MethodArgumentNotValidException ex, HttpServletRequest request) {
@@ -38,7 +37,7 @@ public class GlobalExceptionHandler {
         });
 
         String message = "Erro de validação. Verifique os campos.";
-        logger.warn("Validation error: {} on path {}", message, request.getRequestURI(), ex); // Log menos verboso
+        logger.warn("Validation error: {} on path {}", message, request.getRequestURI(), ex);
 
         ApiErrorResponse errorResponse = new ApiErrorResponse(
                 Instant.now(),
@@ -46,12 +45,11 @@ public class GlobalExceptionHandler {
                 HttpStatus.BAD_REQUEST.getReasonPhrase(),
                 message,
                 request.getRequestURI(),
-                errors // Inclui os detalhes dos campos
+                errors
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
 
-    // --- Erros de Negócio Customizados ---
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleResourceNotFoundException(
             ResourceNotFoundException ex, HttpServletRequest request) {
@@ -60,7 +58,7 @@ public class GlobalExceptionHandler {
         ApiErrorResponse errorResponse = new ApiErrorResponse(
                 HttpStatus.NOT_FOUND.value(),
                 HttpStatus.NOT_FOUND.getReasonPhrase(),
-                ex.getMessage(), // Mensagem da própria exceção
+                ex.getMessage(),
                 request.getRequestURI()
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
@@ -80,22 +78,6 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);
     }
 
-    @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<ApiErrorResponse> handleBusinessRuleException(
-            RuntimeException ex, HttpServletRequest request) {
-
-        logger.warn("Business rule violation: {} on path {}", ex.getMessage(), request.getRequestURI());
-        ApiErrorResponse errorResponse = new ApiErrorResponse(
-                HttpStatus.BAD_REQUEST.value(), // Ou 422 Unprocessable Entity
-                HttpStatus.BAD_REQUEST.getReasonPhrase(),
-                ex.getMessage(),
-                request.getRequestURI()
-        );
-        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
-    }
-
-    // --- Erros de Segurança (Spring Security) ---
-    // Pode ser que o Spring Security já trate isso, mas você pode customizar
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiErrorResponse> handleAccessDeniedException(
             AccessDeniedException ex, HttpServletRequest request) {
@@ -110,7 +92,7 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(errorResponse, HttpStatus.FORBIDDEN);
     }
 
-    @ExceptionHandler({BadCredentialsException.class})
+    @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ApiErrorResponse> handleBadCredentialsException(
             BadCredentialsException ex, HttpServletRequest request) {
 
@@ -124,7 +106,7 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
     }
 
-    @ExceptionHandler({DisabledException.class})
+    @ExceptionHandler(DisabledException.class)
     public ResponseEntity<ApiErrorResponse> handleDisabledException(
             DisabledException ex, HttpServletRequest request) {
 
@@ -138,20 +120,16 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
     }
 
-
-    // --- Erro Genérico (Catch-All) ---
-    // Deve ser o último handler
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> handleGenericException(
             Exception ex, HttpServletRequest request) {
 
-        // LOG DETALHADO É CRUCIAL AQUI!
         logger.error("An unexpected error occurred on path {}: {}", request.getRequestURI(), ex.getMessage(), ex);
 
         ApiErrorResponse errorResponse = new ApiErrorResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(),
-                "Ocorreu um erro inesperado no servidor. Tente novamente mais tarde.", // Mensagem genérica para o usuário
+                "Ocorreu um erro inesperado no servidor. Tente novamente mais tarde.",
                 request.getRequestURI()
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
