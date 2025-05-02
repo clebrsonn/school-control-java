@@ -1,16 +1,16 @@
 package br.com.hyteck.school_control.web.controllers;
 
 import br.com.hyteck.school_control.models.payments.Payment;
+import br.com.hyteck.school_control.usecases.billing.FindPaymentById;
 import br.com.hyteck.school_control.usecases.billing.ProcessPaymentUseCase;
+import br.com.hyteck.school_control.web.dtos.classroom.ClassRoomResponse;
 import br.com.hyteck.school_control.web.dtos.payments.PaymentRequest;
 import br.com.hyteck.school_control.web.dtos.payments.PaymentResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
 
@@ -20,9 +20,11 @@ import jakarta.validation.Valid;
 public class PaymentController {
 
     private final ProcessPaymentUseCase processPaymentUseCase;
+    private final FindPaymentById findPaymentById;
 
-    public PaymentController(ProcessPaymentUseCase processPaymentUseCase) {
+    public PaymentController(ProcessPaymentUseCase processPaymentUseCase, FindPaymentById findPaymentById) {
         this.processPaymentUseCase = processPaymentUseCase;
+        this.findPaymentById = findPaymentById;
     }
 
     @PostMapping
@@ -35,5 +37,13 @@ public class PaymentController {
     public PaymentResponse processPayment(@Valid @RequestBody PaymentRequest request) {
         Payment payment = processPaymentUseCase.execute(request.invoiceId(), request.amount(), request.paymentMethod());
         return PaymentResponse.from(payment);
+    }
+
+    // --- READ (Single) ---
+    @GetMapping("/{id}")
+    public ResponseEntity<PaymentResponse> getPaymentById(@PathVariable String id) {
+        return findPaymentById.execute(id)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 }

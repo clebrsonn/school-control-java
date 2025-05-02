@@ -4,6 +4,7 @@ import br.com.hyteck.school_control.config.jwt.provider.JWTProvider;
 import br.com.hyteck.school_control.usecases.user.VerifyAccount;
 import br.com.hyteck.school_control.web.dtos.auth.AuthenticationRequest;
 import br.com.hyteck.school_control.web.dtos.auth.AuthenticationResponse;
+import br.com.hyteck.school_control.web.dtos.user.UserResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -44,6 +45,8 @@ public class AuthenticationController {
         final UserDetails userDetails = userDetailsService.loadUserByUsername(authenticationRequest.getLogin());
         final AuthenticationResponse authenticationResponse = new AuthenticationResponse();
         authenticationResponse.setToken(jwtTokenService.generateToken(userDetails.getUsername()));
+        UserResponse userResponse = new UserResponse("", userDetails.getUsername(), "", null, true, true, true, true, null, null);
+        authenticationResponse.setUser(userResponse);
         return authenticationResponse;
     }
 

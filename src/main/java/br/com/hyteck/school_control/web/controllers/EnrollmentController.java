@@ -1,27 +1,28 @@
 package br.com.hyteck.school_control.web.controllers;
 
 import br.com.hyteck.school_control.usecases.enrollment.CreateEnrollment;
+import br.com.hyteck.school_control.usecases.enrollment.FindEnrollmentsByStudentId;
 import br.com.hyteck.school_control.web.dtos.classroom.EnrollmentRequest;
 import br.com.hyteck.school_control.web.dtos.classroom.EnrollmentResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
+import java.util.List;
 
 @RestController
 @RequestMapping("/enrollments") // Endpoint base para matrículas
 public class EnrollmentController {
 
     private final CreateEnrollment createEnrollmentUseCase;
+    private final FindEnrollmentsByStudentId findEnrollmentsByStudentId;
 
-    public EnrollmentController(CreateEnrollment createEnrollmentUseCase) {
+    public EnrollmentController(CreateEnrollment createEnrollmentUseCase, FindEnrollmentsByStudentId findEnrollmentsByStudentId) {
         this.createEnrollmentUseCase = createEnrollmentUseCase;
+        this.findEnrollmentsByStudentId = findEnrollmentsByStudentId;
     }
 
     @PostMapping
@@ -38,7 +39,17 @@ public class EnrollmentController {
         return ResponseEntity.created(location).body(createdEnrollment);
     }
 
-    // Adicionar outros endpoints (DELETE /enrollments/{id}, GET /enrollments, GET /students/{id}/enrollments, etc.)
-    // ...
+    //TODO: implementar o securityService.isStudentOwner
+    //TODO: Ajustar o responsável, pois ele vai ser um tipo de usuário do sistema, e não uma entidade separada
+    @GetMapping("/students/{studentId}")
+    @PreAuthorize("hasRole('ADMIN') or @securityService.isStudentOwner(authentication, #studentId)")
+    public ResponseEntity<List<EnrollmentResponse>> getStudentEnrollments(@PathVariable String studentId) {
+        List<EnrollmentResponse> enrollments = findEnrollmentsByStudentId.execute(studentId);
+        if (enrollments.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        } else {
+            return ResponseEntity.ok(enrollments);
+        }
+    }
 
 }

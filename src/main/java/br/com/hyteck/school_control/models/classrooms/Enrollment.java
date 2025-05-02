@@ -39,8 +39,6 @@ public class Enrollment extends AbstractModel {
     @JoinColumn(name = "student_id", nullable = false) // Adicionar JoinColumn
     private Student student;
 
-    private Boolean isActive;
-
     private LocalDateTime startDate;
     private LocalDateTime endDate;
 

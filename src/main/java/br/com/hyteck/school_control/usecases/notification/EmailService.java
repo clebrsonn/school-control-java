@@ -1,5 +1,6 @@
-package br.com.hyteck.school_control.usecases.user;
+package br.com.hyteck.school_control.usecases.notification;
 
+import br.com.hyteck.school_control.models.auth.VerificationToken;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.SneakyThrows;
@@ -15,7 +16,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service
-public class EmailService {
+public class EmailService implements Notifications {
 
     private static final Logger logger = LoggerFactory.getLogger(EmailService.class);
     private final JavaMailSender mailSender;
@@ -33,14 +34,32 @@ public class EmailService {
     @SneakyThrows
     @Async
     @Retryable(
-            retryFor = {MailException.class, MessagingException.class}, // Exceções que devem ser retentadas
-            maxAttempts = 3, // Número máximo de tentativas
-            backoff = @Backoff(delay = 2000, multiplier = 2) // Espera de 2s, dobra o tempo a cada tentativa
+            retryFor = {MailException.class, MessagingException.class},
+            backoff = @Backoff(delay = 2000, multiplier = 2)
     )
-    public void sendVerificationEmail(String to, String token) {
+    public void send(VerificationToken verificationToken) {
         String subject = "Ativação de Conta - School Control";
-        String verificationUrl = appBaseUrl + "/api/auth/verify?token=" + token; // Endpoint de verificação
-        String messageBody = """
+        final String messageBody = getBodyMessage(verificationToken);
+
+        MimeMessage mimeMessage = mailSender.createMimeMessage();
+        try {
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8"); // true para HTML
+            helper.setFrom(fromEmail);
+            helper.setTo(verificationToken.getUser().getEmail());
+            helper.setSubject(subject);
+            helper.setText(messageBody, true); // true para indicar que o corpo é HTML
+
+            mailSender.send(mimeMessage);
+            logger.info("Email de verificação enviado para {}", verificationToken.getUser().getEmail());
+        } catch (MailException | MessagingException e) {
+            logger.error("Erro ao enviar email de verificação para {}: {}", verificationToken.getUser().getEmail(), e.getMessage());
+            throw e;
+        }
+    }
+
+    private String getBodyMessage(VerificationToken verificationToken) {
+        String verificationUrl = appBaseUrl + "/api/auth/verify?token=" + verificationToken.getToken(); // Endpoint de verificação
+        return """
                 <html><body>
                 <h2>Bem-vindo ao School Control!</h2>
                 <p>Clique no link abaixo para ativar sua conta:</p>
@@ -51,21 +70,5 @@ public class EmailService {
                 <p>Atenciosamente,<br/>Equipe School Control</p>
                 </body></html>
                 """.formatted(verificationUrl);
-
-        MimeMessage mimeMessage = mailSender.createMimeMessage();
-        try {
-            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8"); // true para HTML
-            helper.setFrom(fromEmail);
-            helper.setTo(to);
-            helper.setSubject(subject);
-            helper.setText(messageBody, true); // true para indicar que o corpo é HTML
-
-            mailSender.send(mimeMessage);
-            logger.info("Email de verificação enviado para {}", to);
-        } catch (MailException | MessagingException e) {
-            logger.error("Erro ao enviar email de verificação para {}: {}", to, e.getMessage());
-            // Considere adicionar lógica de retry ou notificação de falha
-            throw e;
-        }
     }
 }

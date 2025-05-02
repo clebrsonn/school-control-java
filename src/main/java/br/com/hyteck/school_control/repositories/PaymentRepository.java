@@ -15,4 +15,5 @@ public interface PaymentRepository extends JpaRepository<Payment, String> {
     
     @Query("SELECT p FROM Payment p WHERE p.invoice.responsible.id = :responsibleId")
     List<Payment> findByResponsibleId(String responsibleId);
+
 }

@@ -17,7 +17,8 @@ public record EnrollmentResponse(
         String classRoomName,
         String classRoomYear,
         LocalDateTime enrollmentDate,
-        boolean isActive
+        LocalDateTime endDate,
+        String status
 ) {
     public static EnrollmentResponse from(Enrollment enrollment) {
         if (enrollment == null) {
@@ -33,7 +34,9 @@ public record EnrollmentResponse(
                 classRoom != null ? classRoom.getName() : null,
                 classRoom != null ? classRoom.getYear() : null,
                 enrollment.getStartDate(),
-                enrollment.getIsActive()
+                enrollment.getEndDate(),
+                enrollment.getStatus().name()
+
         );
     }
 }

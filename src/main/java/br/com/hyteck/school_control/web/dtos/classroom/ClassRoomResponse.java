@@ -9,9 +9,7 @@ import br.com.hyteck.school_control.models.classrooms.ClassRoom;
 public record ClassRoomResponse(
         String id,
         String name,
-//        Integer capacity,
-        String schoolYear // Ou String
-        // Adicione outros campos
+        String schoolYear
 ) {
     /**
      * Método factory para converter uma entidade ClassRoom em um DTO de resposta.
