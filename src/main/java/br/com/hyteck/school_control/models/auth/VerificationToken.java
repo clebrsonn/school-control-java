@@ -18,7 +18,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class VerificationToken {
 
-    private static final int EXPIRATION_HOURS = 24; // Tempo de expiração do token (ex: 24 horas)
+    private static final int EXPIRATION_HOURS = 24;
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

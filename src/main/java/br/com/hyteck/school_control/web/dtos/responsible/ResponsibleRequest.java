@@ -15,7 +15,6 @@ public record ResponsibleRequest(
         @Size(min = 2)
         String name,
 
-        @NotBlank
         @Email
         String email,
 

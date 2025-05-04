@@ -88,7 +88,7 @@ public class CreateEnrollment {
                 .description("Taxa de Matrícula")
                 .amount(BigDecimal.valueOf(30))
                 .dueDate(LocalDate.now().plusDays(1)) // Exemplo: 7 dias para vencer
-                .issueDate(LocalDate.from(Instant.now())) // Data de emissão
+                .issueDate(Instant.now().atZone(java.time.ZoneId.systemDefault()).toLocalDate()) // Data de emissão
                 .status(InvoiceStatus.PENDING)
                 .referenceMonth(YearMonth.now()) // Mês atual
                 .build();
