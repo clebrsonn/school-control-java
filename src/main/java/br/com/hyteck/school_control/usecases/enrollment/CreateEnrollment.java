@@ -64,7 +64,6 @@ public class CreateEnrollment {
                 .student(student)
                 .classroom(classRoom)
                 .status(Enrollment.Status.ACTIVE)
-                // enrollmentDate será preenchido pelo @CreatedDate ou @PrePersist
                 .build();
 
         newEnrollment.validateEnrollmentRules(enrollmentRepository);

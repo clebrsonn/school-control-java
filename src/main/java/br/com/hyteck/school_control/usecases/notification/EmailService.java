@@ -58,7 +58,7 @@ public class EmailService implements Notifications {
     }
 
     private String getBodyMessage(VerificationToken verificationToken) {
-        String verificationUrl = appBaseUrl + "/api/auth/verify?token=" + verificationToken.getToken(); // Endpoint de verificação
+        String verificationUrl = appBaseUrl + "/auth/verify?token=" + verificationToken.getToken(); // Endpoint de verificação
         return """
                 <html><body>
                 <h2>Bem-vindo ao School Control!</h2>
