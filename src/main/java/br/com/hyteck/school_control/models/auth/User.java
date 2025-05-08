@@ -3,11 +3,15 @@ package br.com.hyteck.school_control.models.auth;
 import br.com.hyteck.school_control.models.AbstractModel;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
@@ -17,12 +21,13 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Entity
-@Table(name = "users") // Good practice to specify table name, "user" can be reserved keyword
-@Getter // Lombok annotation to generate getters
-@Setter // Lombok annotation to generate setters
-@NoArgsConstructor // Lombok annotation for no-args constructor (required by JPA)
-@AllArgsConstructor // Lombok annotation for all-args constructor
-@Builder
+@Table(name = "users")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@SuperBuilder
+@Inheritance(strategy = InheritanceType.JOINED)
 public class User extends AbstractModel implements UserDetails {
 
     @Column(unique = true, nullable = false)
@@ -34,10 +39,7 @@ public class User extends AbstractModel implements UserDetails {
     @Column(unique = true, nullable = false)
     private String email;
 
-    // --- UserDetails fields ---
-    // Using ElementCollection for simplicity to store roles as strings directly in a separate table
-    // For more complex scenarios, a ManyToMany relationship with a Role entity is common.
-    @ManyToMany(fetch = FetchType.EAGER) // EAGER fetch is often needed for security checks
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "user_roles",
             joinColumns = @JoinColumn(name = "user_id"),
@@ -51,7 +53,7 @@ public class User extends AbstractModel implements UserDetails {
     @Builder.Default
     private boolean accountNonLocked = true;
     @Builder.Default
-    private boolean credentialsNonExpired = false;
+    private boolean credentialsNonExpired = true;
     @Builder.Default
     private boolean enabled = false;
 
@@ -75,8 +77,6 @@ public class User extends AbstractModel implements UserDetails {
                 .map(role -> new SimpleGrantedAuthority(role.getName()))
                 .collect(Collectors.toList());
     }
-
-    // getPassword() and getUsername() are already covered by Lombok's @Getter
 
     @Override
     public boolean isAccountNonExpired() {
@@ -112,25 +112,5 @@ public class User extends AbstractModel implements UserDetails {
     public int hashCode() {
         return id != null ? id.hashCode() : 0;
     }
-
-//    public void setRoles(Set<String> roles) {
-//
-//        this.roles = findAndValidateRoles(roles);;
-//    }
-//
-//    private Set<Role> findAndValidateRoles(Set<String> roleNames) {
-//        if (roleNames == null || roleNames.isEmpty()) {
-//            throw new IllegalArgumentException("Pelo menos uma role deve ser fornecida.");
-//        }
-//        Set<Role> foundRoles = roleRepository.findByNameIn(roleNames);
-//        if (foundRoles.size() != roleNames.size()) {
-//            Set<String> foundRoleNames = foundRoles.stream().map(Role::getName).collect(Collectors.toSet());
-//            Set<String> missingRoles = roleNames.stream()
-//                    .filter(name -> !foundRoleNames.contains(name))
-//                    .collect(Collectors.toSet());
-//            throw new ResourceNotFoundException("Roles não encontradas: " + missingRoles);
-//        }
-//        return foundRoles;
-//    }
 
 }

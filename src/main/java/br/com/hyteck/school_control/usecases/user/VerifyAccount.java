@@ -49,6 +49,8 @@ public class VerifyAccount {
             // Pode deletar o token mesmo assim, pois foi usado
         } else {
             user.setEnabled(true);
+            user.setAccountNonExpired(true);
+            user.setCredentialsNonExpired(true);
             // user.setCredentialsNonExpired(true); // Garanta que as credenciais não estão expiradas
             userRepository.save(user);
             logger.info("Usuário {} ativado com sucesso via token {}", user.getId(), tokenValue);

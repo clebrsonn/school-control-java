@@ -12,6 +12,9 @@ import br.com.hyteck.school_control.usecases.notification.Notifications;
 import br.com.hyteck.school_control.web.dtos.user.UserRequest;
 import br.com.hyteck.school_control.web.dtos.user.UserResponse;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.java.Log;
+import lombok.extern.log4j.Log4j2;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -27,27 +30,19 @@ import java.util.stream.Collectors;
 
 @Service
 @Validated
+@Log4j2
+@RequiredArgsConstructor
 public class CreateUser {
 
-    private static final Logger logger = LoggerFactory.getLogger(CreateUser.class);
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
-    private final PasswordEncoder passwordEncoder;
 
     private final VerificationTokenRepository tokenRepository;
     private final Notifications notifications; // Injetar EmailService
 
-    public CreateUser(UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder, VerificationTokenRepository tokenRepository, Notifications notifications) {
-        this.userRepository = userRepository;
-        this.roleRepository = roleRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.tokenRepository = tokenRepository;
-        this.notifications = notifications;
-    }
-
     @Transactional
     public UserResponse execute(@Valid UserRequest requestDTO) {
-        logger.info("Iniciando criação de usuário: {}", requestDTO.username());
+        log.info("Iniciando criação de usuário: {}", requestDTO.username());
 
         if (!StringUtils.hasText(requestDTO.password())) {
             throw new IllegalArgumentException("Senha é obrigatória para criar usuário."); // Ou BusinessRuleException
@@ -59,31 +54,27 @@ public class CreateUser {
 
         Set<Role> roles = findAndValidateRoles(Set.of("ROLE_USER"));
 
-        // 4. Mapear DTO para Entidade
         User userToSave = User.builder()
                 .username(requestDTO.username())
-                .password(passwordEncoder.encode(requestDTO.password()))
+                .password(requestDTO.password())
                 .email(requestDTO.email())
                 .roles(roles)
                 .build();
 
         User savedUser = userRepository.save(userToSave);
-        logger.info("Usuário criado com sucesso. ID: {}", savedUser.getId());
-
-        // 6. Mapear para Resposta
+        log.info("Usuário criado com sucesso. ID: {}", savedUser.getId());
 
         VerificationToken verificationToken = new VerificationToken(savedUser);
         tokenRepository.save(verificationToken);
-        logger.info("Token de verificação gerado para o usuário {}", savedUser.getUsername());
+        log.info("Token de verificação gerado para o usuário {}", savedUser.getUsername());
 
-        String userEmail = savedUser.getEmail();
-        String tokenValue = verificationToken.getToken();
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
                 notifications.send(verificationToken);
             }
         });
+
         return UserResponse.from(savedUser);
     }
 

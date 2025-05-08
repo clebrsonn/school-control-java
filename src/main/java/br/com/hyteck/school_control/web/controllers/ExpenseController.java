@@ -3,6 +3,7 @@ package br.com.hyteck.school_control.web.controllers;
 import br.com.hyteck.school_control.models.expenses.Expense;
 import br.com.hyteck.school_control.usecases.expenses.CreateExpenseUseCase;
 import br.com.hyteck.school_control.usecases.expenses.ListExpensesUseCase;
+import br.com.hyteck.school_control.usecases.expenses.UpdateExpenseUseCase;
 import br.com.hyteck.school_control.web.dtos.expenses.ExpenseRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -19,11 +20,13 @@ import java.util.List;
 public class ExpenseController {
 
     private final CreateExpenseUseCase createExpenseUseCase;
+    private final UpdateExpenseUseCase updateExpenseUseCase;
     private final ListExpensesUseCase listExpensesUseCase;
 
-    public ExpenseController(CreateExpenseUseCase createExpenseUseCase, 
-                           ListExpensesUseCase listExpensesUseCase) {
+    public ExpenseController(CreateExpenseUseCase createExpenseUseCase, UpdateExpenseUseCase updateExpenseUseCase,
+                             ListExpensesUseCase listExpensesUseCase) {
         this.createExpenseUseCase = createExpenseUseCase;
+        this.updateExpenseUseCase = updateExpenseUseCase;
         this.listExpensesUseCase = listExpensesUseCase;
     }
 
@@ -35,7 +38,7 @@ public class ExpenseController {
 
     @PutMapping(path = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Expense> updateExpense(@PathVariable String id, @ModelAttribute ExpenseRequest expense) {
-        Expense createdExpense = createExpenseUseCase.execute(expense);
+        Expense createdExpense = updateExpenseUseCase.execute(id, expense);
         return ResponseEntity.ok(createdExpense);
     }
 

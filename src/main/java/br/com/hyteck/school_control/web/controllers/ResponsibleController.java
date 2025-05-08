@@ -125,7 +125,6 @@ public class ResponsibleController {
     @ApiResponse(responseCode = "403", description = "Acesso negado")
     @ApiResponse(responseCode = "404", description = "Responsável não encontrado (se o use case verificar)")
     @PreAuthorize("hasRole('ADMIN') or @securityService.isResponsibleSelfOrAdmin(authentication, #responsibleId)")
-    // Segurança essencial!
     public ResponseEntity<List<PaymentResponse>> getPaymentsByResponsible(
             @PathVariable String responsibleId) { // Adicionado Authentication
 //        logger.info("Buscando pagamentos para o responsável ID: {}", responsibleId);

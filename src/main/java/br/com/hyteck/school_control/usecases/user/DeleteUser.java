@@ -3,6 +3,7 @@ package br.com.hyteck.school_control.usecases.user;
 import br.com.hyteck.school_control.exceptions.ResourceNotFoundException;
 import br.com.hyteck.school_control.models.auth.User;
 import br.com.hyteck.school_control.repositories.UserRepository;
+import lombok.extern.log4j.Log4j2;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 // Importar SecurityContextHolder se for impedir auto-deleção
@@ -11,9 +12,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Log4j2
 public class DeleteUser {
 
-    private static final Logger logger = LoggerFactory.getLogger(DeleteUser.class);
     private final UserRepository userRepository;
 
     public DeleteUser(UserRepository userRepository) {
@@ -22,7 +23,7 @@ public class DeleteUser {
 
     @Transactional
     public void execute(String id) {
-        logger.info("Iniciando exclusão do usuário com ID: {}", id);
+        log.info("Iniciando exclusão do usuário com ID: {}", id);
 
         // 1. Verificar existência
         User userToDelete = userRepository.findById(id)
@@ -45,6 +46,6 @@ public class DeleteUser {
 
         // 3. Deletar
         userRepository.delete(userToDelete);
-        logger.info("Usuário excluído com sucesso. ID: {}", id);
+        log.info("Usuário excluído com sucesso. ID: {}", id);
     }
 }

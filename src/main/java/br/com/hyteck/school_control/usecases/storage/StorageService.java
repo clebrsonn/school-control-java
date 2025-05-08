@@ -1,4 +1,4 @@
-package br.com.hyteck.school_control.usecases.expenses;
+package br.com.hyteck.school_control.usecases.storage;
 
 import org.springframework.core.io.Resource;
 import org.springframework.web.multipart.MultipartFile;

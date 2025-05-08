@@ -13,9 +13,8 @@ public record UserRequest(
         @Size(min = 3, max = 50)
         String username,
 
-        // Senha não é @NotBlank aqui, pois pode ser opcional na atualização
-        @Size(min = 6, max = 100) // Validar tamanho se fornecida
-        String password, // Será obrigatório apenas na lógica de criação
+        @Size(min = 6, max = 100)
+        String password,
 
         @NotBlank
         @Email

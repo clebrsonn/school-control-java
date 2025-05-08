@@ -1,6 +1,7 @@
-package br.com.hyteck.school_control.usecases.expenses;
+package br.com.hyteck.school_control.usecases.storage;
 
 import br.com.hyteck.school_control.exceptions.StorageException;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
@@ -15,7 +16,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.stream.Stream;
+
 @Service
+@Qualifier("file-system")
 public class FileStorageService implements StorageService {
 
     private final Path rootLocation = Paths.get("uploads");
@@ -56,7 +59,7 @@ public class FileStorageService implements StorageService {
                 Files.copy(inputStream, destinationFile,
                         StandardCopyOption.REPLACE_EXISTING);
             }
-            return destinationFile.toAbsolutePath().toString();
+            return destinationFile.getFileName().toString();
         }
         catch (IOException e) {
             throw new StorageException("Failed to store file.", e);
