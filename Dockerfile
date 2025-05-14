@@ -1,5 +1,5 @@
 # Etapa de build
-FROM gradle:8.5.0-jdk23 AS build
+FROM gradle:8-jdk-21-and-23-jammy AS build
 WORKDIR /app
 COPY . .
 RUN gradle clean build -x test
