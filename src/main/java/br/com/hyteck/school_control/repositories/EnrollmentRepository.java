@@ -47,4 +47,5 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, String> 
      */
     Page<Enrollment> findByClassroomId(String classroomId, Pageable pageable);
 
+    List<Enrollment> findByStatus(Enrollment.Status status);
 }

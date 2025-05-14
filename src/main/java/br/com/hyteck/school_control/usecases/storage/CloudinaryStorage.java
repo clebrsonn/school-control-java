@@ -2,6 +2,7 @@ package br.com.hyteck.school_control.usecases.storage;
 
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
+import lombok.extern.log4j.Log4j2;
 import org.jboss.logging.Logger;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,11 +16,10 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.stream.Stream;
 
+@Log4j2
 @Service
 @Qualifier("cloudinary")
 public class CloudinaryStorage implements StorageService {
-
-    private static Logger logger =Logger.getLogger(Cloudinary.class);
 
     private Cloudinary cloudinary;
 
@@ -45,7 +45,7 @@ public class CloudinaryStorage implements StorageService {
 
             return (String) result.get("secure_url");
         } catch (IOException e) {
-            logger.error(Arrays.stream(e.getStackTrace()).map(StackTraceElement::toString).reduce("", (a, b) -> a + "\n" + b));
+            log.error(Arrays.stream(e.getStackTrace()).map(StackTraceElement::toString).reduce("", (a, b) -> a + "\n" + b));
             throw new RuntimeException("Failed to upload file to Cloudinary", e);
         }
     }

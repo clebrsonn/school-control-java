@@ -1,5 +1,6 @@
 package br.com.hyteck.school_control.usecases.notification;
 
+import br.com.hyteck.school_control.models.Notification;
 import br.com.hyteck.school_control.models.auth.VerificationToken;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -31,27 +32,15 @@ public class EmailService implements Notifications {
         this.mailSender = mailSender;
     }
 
-    @SneakyThrows
-    @Async
-    @Retryable(
-            retryFor = {MailException.class, MessagingException.class},
-            backoff = @Backoff(delay = 2000, multiplier = 2)
-    )
     public void send(VerificationToken verificationToken) {
         String subject = "Ativação de Conta - School Control";
         final String messageBody = getBodyMessage(verificationToken);
 
-        MimeMessage mimeMessage = mailSender.createMimeMessage();
         try {
-            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8"); // true para HTML
-            helper.setFrom(fromEmail);
-            helper.setTo(verificationToken.getUser().getEmail());
-            helper.setSubject(subject);
-            helper.setText(messageBody, true); // true para indicar que o corpo é HTML
+            sendGenericNotificationEmail(verificationToken.getUser().getEmail(), subject, messageBody);
 
-            mailSender.send(mimeMessage);
             logger.info("Email de verificação enviado para {}", verificationToken.getUser().getEmail());
-        } catch (MailException | MessagingException e) {
+        } catch (MailException e) {
             logger.error("Erro ao enviar email de verificação para {}: {}", verificationToken.getUser().getEmail(), e.getMessage());
             throw e;
         }
@@ -70,5 +59,50 @@ public class EmailService implements Notifications {
                 <p>Atenciosamente,<br/>Equipe School Control</p>
                 </body></html>
                 """.formatted(verificationUrl);
+    }
+
+    // Dentro de EmailService.java (exemplo de adaptação)
+
+// ... (código existente)
+
+    @SneakyThrows
+    @Async
+    @Retryable(
+            retryFor = {MailException.class, MessagingException.class},
+            backoff = @Backoff(delay = 2000, multiplier = 2)
+    )
+    public void sendGenericNotificationEmail(String toEmail, String subject, String htmlBodyContent) {
+        MimeMessage mimeMessage = mailSender.createMimeMessage();
+        try {
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
+            helper.setFrom(fromEmail);
+            helper.setTo(toEmail);
+            helper.setSubject(subject);
+            helper.setText(htmlBodyContent, true); // true para HTML
+
+            mailSender.send(mimeMessage);
+            logger.info("Email de notificação genérica enviado para {}", toEmail);
+        } catch (MailException | MessagingException e) {
+            logger.error("Erro ao enviar email de notificação genérica para {}: {}", toEmail, e.getMessage());
+            throw e;
+        }
+    }
+
+    // Método para construir o corpo do email a partir de uma Notification (exemplo)
+    public String buildEmailBodyFromNotification(Notification notification) {
+        String title = "Nova Notificação - School Control"; // Ou baseado no notification.getType()
+        String callToAction = notification.getLink() != null ?
+                String.format("<p><a href=\"%s%s\">Clique aqui para ver os detalhes</a></p>", appBaseUrl, notification.getLink()) :
+                "";
+
+        return String.format("""
+                <html><body>
+                <h2>%s</h2>
+                <p>%s</p>
+                %s
+                <br/>
+                <p>Atenciosamente,<br/>Equipe School Control</p>
+                </body></html>
+                """, title, notification.getMessage(), callToAction);
     }
 }

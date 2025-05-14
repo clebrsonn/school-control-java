@@ -11,6 +11,8 @@ import br.com.hyteck.school_control.models.payments.PaymentMethod;
 import java.math.BigDecimal;
 import java.time.LocalDateTime; // Pode manter LocalDateTime se a hora do pagamento for importante
 
+import static br.com.hyteck.school_control.models.payments.PaymentMethod.PIX;
+
 @Entity
 @Table(name = "payments") // Nome da tabela
 @Getter // Lombok
@@ -42,7 +44,8 @@ public class Payment extends AbstractModel {
 
     @Enumerated(EnumType.STRING)
     @Column(length = 50)
-    private PaymentMethod paymentMethod; // Forma de pagamento (PIX, Boleto, Cartão)
+    @Builder.Default
+    private PaymentMethod paymentMethod = PIX; // Forma de pagamento (PIX, Boleto, Cartão)
 
     private String transactionId; // ID da transação (gateway de pagamento, etc.)
     private String description; // Descrição/Observação do pagamento

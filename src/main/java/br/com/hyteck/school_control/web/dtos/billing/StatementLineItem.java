@@ -19,14 +19,4 @@ public record StatementLineItem(
         String description,
         BigDecimal amount,
         LocalDate dueDate
-        // Poderia adicionar campos de desconto aqui se implementado na Invoice
-) {
-    // O compilador gera automaticamente:
-    // - Construtor canônico (recebendo todos os parâmetros)
-    // - Métodos de acesso (ex: invoiceId(), studentName())
-    // - equals(), hashCode() e toString() baseados em todos os componentes
-    // - A classe é implicitamente final e os campos são privados e finais.
-
-    // Corpo geralmente vazio, a menos que precise de construtores compactos,
-    // métodos estáticos ou métodos de instância adicionais (que não modifiquem estado).
-}
+) { }

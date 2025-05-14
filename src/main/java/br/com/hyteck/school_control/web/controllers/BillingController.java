@@ -1,29 +1,38 @@
 package br.com.hyteck.school_control.web.controllers;
 
-import br.com.hyteck.school_control.web.dtos.billing.ConsolidatedStatement;
+import br.com.hyteck.school_control.models.payments.InvoiceStatus;
+import br.com.hyteck.school_control.usecases.billing.CountInvoicesByStatus;
 import br.com.hyteck.school_control.usecases.billing.GenerateConsolidatedStatementUseCase;
+import br.com.hyteck.school_control.usecases.billing.GenerateInvoicesForParents;
+import br.com.hyteck.school_control.web.dtos.billing.ConsolidatedStatement;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.YearMonth;
+import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @RestController
 @RequestMapping("/billing")
 public class BillingController {
 
     private final GenerateConsolidatedStatementUseCase generateStatementUseCase;
+    private final GenerateInvoicesForParents generateInvoicesForParents;
+    private final CountInvoicesByStatus countInvoicesByStatus;
 
-    public BillingController(GenerateConsolidatedStatementUseCase generateStatementUseCase) {
+    public BillingController(GenerateConsolidatedStatementUseCase generateStatementUseCase, GenerateInvoicesForParents generateInvoicesForParents, CountInvoicesByStatus countInvoicesByStatus) {
         this.generateStatementUseCase = generateStatementUseCase;
+        this.generateInvoicesForParents = generateInvoicesForParents;
+        this.countInvoicesByStatus = countInvoicesByStatus;
     }
 
     @GetMapping("/responsibles/{responsibleId}/statements/{yearMonth}")
-    public ResponseEntity<ConsolidatedStatement> getConsolidatedStatement(
+    public ResponseEntity<ConsolidatedStatement> getConsolidatedStatementForResponsible(
             @PathVariable String responsibleId,
             @PathVariable @DateTimeFormat(pattern = "yyyy-MM") YearMonth yearMonth) { // Recebe ano-mês
 
@@ -33,6 +42,29 @@ public class BillingController {
         return statementOpt
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+    @GetMapping("/statements/{yearMonth}")
+    public ResponseEntity<List<ConsolidatedStatement>> getConsolidatedStatement(
+            @PathVariable @DateTimeFormat(pattern = "yyyy-MM") YearMonth yearMonth) { // Recebe ano-mês
+
+        List<ConsolidatedStatement> statements = generateStatementUseCase.execute(yearMonth);
+
+        // Retorna 200 OK com o extrato se encontrado, ou 404 Not Found se não houver faturas ou responsável
+        return ResponseEntity.ok(statements);
+    }
+
+    @PostMapping("/generate-monthly-invoices/{yearMonth}")
+    @PreAuthorize("hasRole('ADMIN')") // Apenas administradores podem disparar
+    public ResponseEntity<Void> triggerGenerateMonthlyInvoices(
+            @PathVariable @DateTimeFormat(pattern = "yyyy-MM") YearMonth yearMonth) {
+            generateInvoicesForParents.execute(yearMonth);
+            return ResponseEntity.status(HttpStatus.ACCEPTED).build(); // 202 Accepted - processo iniciado
+    }
+
+    @GetMapping("/invoices/{status}/count")
+    @PreAuthorize("hasRole('ADMIN')") // Apenas administradores podem disparar
+    public ResponseEntity<Long> countInvoicesByStatus(@PathVariable InvoiceStatus status){
+        return ResponseEntity.ok(countInvoicesByStatus.execute(status));
     }
 
     // --- Endpoint para Processar Pagamento Consolidado (Exemplo de Webhook) ---

@@ -1,20 +1,21 @@
 package br.com.hyteck.school_control.usecases.enrollment;
 
-import br.com.hyteck.school_control.exceptions.DuplicateResourceException;
 import br.com.hyteck.school_control.exceptions.ResourceNotFoundException;
 import br.com.hyteck.school_control.models.classrooms.ClassRoom;
 import br.com.hyteck.school_control.models.classrooms.Enrollment;
 import br.com.hyteck.school_control.models.classrooms.Student;
 import br.com.hyteck.school_control.models.payments.Invoice;
+import br.com.hyteck.school_control.models.payments.InvoiceItem;
 import br.com.hyteck.school_control.models.payments.InvoiceStatus;
-import br.com.hyteck.school_control.repositories.ClassroomRepository; // Precisa existir
+import br.com.hyteck.school_control.models.payments.Responsible;
+import br.com.hyteck.school_control.repositories.ClassroomRepository;
 import br.com.hyteck.school_control.repositories.EnrollmentRepository;
+import br.com.hyteck.school_control.repositories.InvoiceRepository;
 import br.com.hyteck.school_control.repositories.StudentRepository;
 import br.com.hyteck.school_control.web.dtos.classroom.EnrollmentRequest;
 import br.com.hyteck.school_control.web.dtos.classroom.EnrollmentResponse;
 import jakarta.validation.Valid;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
@@ -22,75 +23,89 @@ import org.springframework.validation.annotation.Validated;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.YearMonth;
 
 @Service
 @Validated
+@Log4j2
 public class CreateEnrollment {
 
-    private static final Logger logger = LoggerFactory.getLogger(CreateEnrollment.class);
     private final EnrollmentRepository enrollmentRepository;
     private final StudentRepository studentRepository;
-    private final ClassroomRepository classRoomRepository; // Injete o repositório de turmas
+    private final ClassroomRepository classRoomRepository;
+    private final InvoiceRepository invoiceRepository;
 
     public CreateEnrollment(EnrollmentRepository enrollmentRepository,
                             StudentRepository studentRepository,
-                            ClassroomRepository classRoomRepository) {
+                            ClassroomRepository classRoomRepository, InvoiceRepository invoiceRepository) {
         this.enrollmentRepository = enrollmentRepository;
         this.studentRepository = studentRepository;
         this.classRoomRepository = classRoomRepository;
+        this.invoiceRepository = invoiceRepository;
     }
 
     @Transactional
     public EnrollmentResponse execute(@Valid EnrollmentRequest requestDTO) {
-        logger.info("Iniciando processo de matrícula para estudante {} na turma {}",
+
+        log.info("Iniciando processo de matrícula para estudante {} na turma {}",
                 requestDTO.studentId(), requestDTO.classRoomId());
 
-        // 1. Buscar Estudante
         Student student = studentRepository.findById(requestDTO.studentId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Estudante não encontrado com ID: " + requestDTO.studentId()
                 ));
 
-        // 2. Buscar Turma
         ClassRoom classRoom = classRoomRepository.findById(requestDTO.classRoomId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Turma não encontrada com ID: " + requestDTO.classRoomId()
                 ));
 
-        // 4. Criar a Entidade Enrollment
         Enrollment newEnrollment = Enrollment.builder()
                 .student(student)
                 .classroom(classRoom)
                 .status(Enrollment.Status.ACTIVE)
+                .monthlyFee(requestDTO.monthyFee() != null ? requestDTO.monthyFee() : new BigDecimal(110)) // <<< Popula a mensalidade 110) // <<< Popula a mensalidade
                 .build();
 
         newEnrollment.validateEnrollmentRules(enrollmentRepository);
-        // 5. Salvar a Matrícula
         Enrollment savedEnrollment = enrollmentRepository.save(newEnrollment);
-        logger.info("Matrícula criada com sucesso. ID: {}", savedEnrollment.getId());
+        log.info("Matrícula criada com sucesso. ID: {}", savedEnrollment.getId());
 
-        if(requestDTO.enrollmentFee() != null && requestDTO.enrollmentFee().signum() > 0){
-            //criar matrícula
-            createEnrollmentFeeInvoice(savedEnrollment);
+        if (requestDTO.enrollmentFee() != null && requestDTO.enrollmentFee().compareTo(BigDecimal.ZERO) > 0) {
+            createAndSaveEnrollmentFeeInvoice(savedEnrollment, requestDTO.enrollmentFee(), student.getResponsible());
         }
 
-
-        // 6. Mapear para Resposta
         return EnrollmentResponse.from(savedEnrollment);
     }
 
-    private Invoice createEnrollmentFeeInvoice(Enrollment enrollment) {
-        return Invoice.builder()
-                .enrollment(enrollment)
-                .description("Taxa de Matrícula")
-                .amount(BigDecimal.valueOf(30))
-                .dueDate(LocalDate.now().plusDays(1)) // Exemplo: 7 dias para vencer
-                .issueDate(Instant.now().atZone(java.time.ZoneId.systemDefault()).toLocalDate()) // Data de emissão
+
+    private void createAndSaveEnrollmentFeeInvoice(Enrollment enrollment, BigDecimal feeAmount, Responsible responsible) {
+        if (responsible == null) {
+            log.error("Não foi possível criar a fatura da taxa de matrícula para enrollment {} pois o responsável não foi encontrado.", enrollment.getId());
+            // Considerar lançar uma exceção ou uma forma de notificar o problema
+            return;
+        }
+
+        Invoice feeInvoice = Invoice.builder()
+                .responsible(responsible)
+                .description("Fatura da Taxa de Matrícula - " + enrollment.getStudent().getName())
+                .dueDate(LocalDate.now().plusDays(7)) // Exemplo: 7 dias para vencer
+                .issueDate(LocalDate.now())
                 .status(InvoiceStatus.PENDING)
-                .referenceMonth(YearMonth.now()) // Mês atual
+                .referenceMonth(YearMonth.now())
                 .build();
+
+        InvoiceItem feeItem = InvoiceItem.builder()
+                .enrollment(enrollment) // Liga o item à matrícula
+                .description("Taxa de Matrícula - Aluno: " + enrollment.getStudent().getName())
+                .amount(feeAmount)
+                .build();
+
+        feeInvoice.addItem(feeItem); // Adiciona o item à fatura e estabelece a relação bidirecional
+        feeInvoice.setAmount(feeInvoice.calculateTotalAmount()); // Calcula o valor total da fatura
+
+        invoiceRepository.save(feeInvoice); // Salva a fatura (e o item por cascata)
+        log.info("Fatura da taxa de matrícula ID {} criada para enrollment {}", feeInvoice.getId(), enrollment.getId());
     }
 
 }

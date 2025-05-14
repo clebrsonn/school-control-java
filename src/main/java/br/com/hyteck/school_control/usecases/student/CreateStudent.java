@@ -5,6 +5,8 @@ import br.com.hyteck.school_control.models.classrooms.Student;
 import br.com.hyteck.school_control.models.payments.Responsible;
 import br.com.hyteck.school_control.repositories.ResponsibleRepository;
 import br.com.hyteck.school_control.repositories.StudentRepository;
+import br.com.hyteck.school_control.usecases.enrollment.CreateEnrollment;
+import br.com.hyteck.school_control.web.dtos.classroom.EnrollmentRequest;
 import br.com.hyteck.school_control.web.dtos.student.StudentRequest;
 import br.com.hyteck.school_control.web.dtos.student.StudentResponse;
 import jakarta.validation.Valid;
@@ -22,9 +24,12 @@ public class CreateStudent {
     private final StudentRepository studentRepository;
     private final ResponsibleRepository responsibleRepository;
 
-    public CreateStudent(StudentRepository studentRepository, ResponsibleRepository responsibleRepository) {
+    private final CreateEnrollment createEnrollment;
+
+    public CreateStudent(StudentRepository studentRepository, ResponsibleRepository responsibleRepository, CreateEnrollment createEnrollment) {
         this.studentRepository = studentRepository;
         this.responsibleRepository = responsibleRepository;
+        this.createEnrollment = createEnrollment;
     }
 
     @Transactional // Asegura que la operación sea atómica
@@ -39,13 +44,11 @@ public class CreateStudent {
 //            throw new DuplicateResourceException("Já existe um estudante com o email: " + requestDTO.email());
 //        }
 
-        // 2. Buscar el Responsable existente por ID
         Responsible responsible = responsibleRepository.findById(requestDTO.responsibleId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Responsável não encontrado: " + requestDTO.responsibleId()
                 ));
 
-        // 3. Mapear DTO a Entidad Student
         Student studentToSave = Student.builder()
                 .name(requestDTO.name())
                 .email(requestDTO.email())
@@ -54,10 +57,10 @@ public class CreateStudent {
                 // Los enrollments se inicializan vacíos por defecto en la entidad
                 .build();
 
-        // 4. Persistir el nuevo estudiante
         Student savedStudent = studentRepository.save(studentToSave);
         logger.info("Estudante '{}' criado con sucesso. ID: {}", savedStudent.getName(), savedStudent.getId());
 
+        createEnrollment.execute(new EnrollmentRequest(savedStudent.getId(), requestDTO.classroom(), null, null));
         // 5. Mapear la entidad guardada a DTO de Respuesta
         return StudentResponse.from(savedStudent);
     }

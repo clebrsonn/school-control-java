@@ -22,6 +22,10 @@ public class Notification extends AbstractModel{
 
     private String message;
 
+    private String link;
+
+    private String type;
+
     private LocalDateTime sendAt;
 
     @Column

@@ -12,6 +12,8 @@ import lombok.experimental.SuperBuilder;
 import java.math.BigDecimal;
 import java.time.LocalDate; // Usar LocalDate para datas sem hora
 import java.time.YearMonth; // Para representar o mês/ano de referência
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "invoices")
@@ -21,13 +23,10 @@ import java.time.YearMonth; // Para representar o mês/ano de referência
 @AllArgsConstructor // Lombok
 @SuperBuilder
 public class Invoice extends AbstractModel {
-    private int installments;
-    private int currentInstallment;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false) // Uma fatura pertence a uma matrícula
-    @JoinColumn(name = "enrollment_id", nullable = false) // Coluna da FK
-    @NotNull
-    private Enrollment enrollment;
+    @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Builder.Default // Use @Builder.Default se usar Lombok @Builder
+    private List<InvoiceItem> items = new ArrayList<>();
 
     @NotNull
     @Positive
@@ -52,7 +51,7 @@ public class Invoice extends AbstractModel {
     private InvoiceStatus status;
 
     // Relacionamento inverso com Payment (uma fatura pode ter um pagamento)
-    @OneToOne(mappedBy = "invoice", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @OneToOne(mappedBy = "invoice", cascade = CascadeType.ALL)
     private Payment payment; // O pagamento que quitou esta fatura (pode ser null)
 
     // Outros campos úteis: description, discount, penalty, etc.
@@ -62,4 +61,14 @@ public class Invoice extends AbstractModel {
     @JoinColumn(name = "responsible_id")
     private Responsible responsible;
 
+    public void addItem(InvoiceItem item) {
+        items.add(item);
+        item.setInvoice(this);
+    }
+
+    public BigDecimal calculateTotalAmount() {
+        return items.stream()
+                .map(InvoiceItem::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
 }

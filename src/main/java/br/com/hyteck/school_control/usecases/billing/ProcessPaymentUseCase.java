@@ -1,10 +1,7 @@
 package br.com.hyteck.school_control.usecases.billing;
 
 import br.com.hyteck.school_control.exceptions.ResourceNotFoundException;
-import br.com.hyteck.school_control.models.payments.Invoice;
-import br.com.hyteck.school_control.models.payments.Payment;
-import br.com.hyteck.school_control.models.payments.PaymentMethod;
-import br.com.hyteck.school_control.models.payments.PaymentStatus;
+import br.com.hyteck.school_control.models.payments.*;
 import br.com.hyteck.school_control.repositories.InvoiceRepository;
 import br.com.hyteck.school_control.repositories.PaymentRepository;
 import org.springframework.stereotype.Service;
@@ -41,6 +38,10 @@ public class ProcessPaymentUseCase {
                 .status(PaymentStatus.COMPLETED)
                 .build();
 
-        return paymentRepository.save(payment);
+        Payment p= paymentRepository.save(payment);
+        invoice.setStatus(InvoiceStatus.PAID);
+        invoice.setPayment(p);
+        invoiceRepository.save(invoice);
+        return p;
     }
 }

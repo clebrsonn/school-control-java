@@ -23,6 +23,8 @@ public record StudentRequest(
         String cpf,
 
         @NotNull
-        String responsibleId
+        String responsibleId,
+
+        String classroom
 ) {
 }

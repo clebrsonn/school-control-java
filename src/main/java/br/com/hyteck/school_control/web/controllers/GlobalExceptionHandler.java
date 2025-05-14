@@ -58,8 +58,8 @@ public class GlobalExceptionHandler {
 
         Map<String, String> errors = new HashMap<>();
         ex.getConstraintViolations().forEach((error) -> {
-            String fieldName = ((FieldError) error).getField();
-            String errorMessage = ((FieldError) error).getDefaultMessage();
+            String fieldName = error.getPropertyPath().toString();
+            String errorMessage = error.getMessage();
             errors.put(fieldName, errorMessage);
         });
 

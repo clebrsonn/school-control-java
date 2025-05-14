@@ -76,8 +76,8 @@ public class GenerateConsolidatedStatementUseCase {
         // 3. Mapear Invoices para DTOs de Linha de Item
         List<StatementLineItem> items = individualInvoices.stream()
                 .map(invoice -> new StatementLineItem(invoice.getId(),
-                        invoice.getEnrollment().getStudent().getName() // Assumindo que os dados estão carregados (cuidado com LAZY loading)
-                        , ("Mensalidade " + invoice.getEnrollment().getClassroom().getName() + " - " + referenceMonth.toString()) // Exemplo
+                        invoice.getItems().getFirst().getEnrollment().getStudent().getName() // Assumindo que os dados estão carregados (cuidado com LAZY loading)
+                        , ("Mensalidade " + invoice.getItems().getFirst().getEnrollment().getClassroom().getName() + " - " + referenceMonth.toString()) // Exemplo
                         , (invoice.getAmount())
                         , (invoice.getDueDate())
                 ))
@@ -107,5 +107,40 @@ public class GenerateConsolidatedStatementUseCase {
         );
 
         return Optional.of(statement);
+    }
+
+    @Transactional(readOnly = true) // Boa prática para operações de leitura
+    public List<ConsolidatedStatement> execute(YearMonth referenceMonth) {
+
+        // 1. Buscar o Responsável (para obter o nome)
+
+        // 2. Buscar todas as Invoices PENDENTES ou VENCIDAS para o responsável e mês de referência
+        List<Invoice> individualInvoices = invoiceRepository.findPendingInvoicesByMonth(
+                referenceMonth,
+                List.of(InvoiceStatus.PENDING, InvoiceStatus.OVERDUE) // Status que podem ser pagos
+        );
+
+        return individualInvoices.stream().map(invoice -> {
+            List<StatementLineItem> items = invoice.getItems().stream()
+                    .map(item -> new StatementLineItem(invoice.getId(),
+                            item.getEnrollment().getStudent().getName()
+                            , ("Mensalidade " + item.getEnrollment().getClassroom().getName() + " - " + referenceMonth.toString()) // Exemplo
+                            , (invoice.getAmount())
+                            , (invoice.getDueDate())
+                    ))
+                    .collect(Collectors.toList());
+
+            return new ConsolidatedStatement(
+                    invoice.getResponsible().getId(),
+                    invoice.getResponsible().getName() // Nome do responsável
+                    , referenceMonth
+                    , invoice.calculateTotalAmount()
+                    , invoice.getDueDate()
+                    , items
+                    // TODO: Gerar link de pagamento ou código de barras aqui, se aplicável
+                    , ""
+                    , ""
+            );
+        }).toList();
     }
 }

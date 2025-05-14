@@ -3,11 +3,13 @@ package br.com.hyteck.school_control.models.classrooms;
 import br.com.hyteck.school_control.exceptions.DuplicateResourceException;
 import br.com.hyteck.school_control.models.AbstractModel;
 import br.com.hyteck.school_control.models.payments.Invoice; // Importar Invoice
+import br.com.hyteck.school_control.models.payments.InvoiceItem;
 import br.com.hyteck.school_control.repositories.EnrollmentRepository;
 import jakarta.persistence.*;
 import lombok.*; // Usar Lombok
 import lombok.experimental.SuperBuilder;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList; // Inicializar a lista
 import java.util.List; // Usar List
@@ -42,10 +44,12 @@ public class Enrollment extends AbstractModel {
     private LocalDateTime startDate;
     private LocalDateTime endDate;
 
-    // Uma matrícula pode ter várias faturas ao longo do tempo
+    private BigDecimal enrollmentFee;
+    private BigDecimal monthlyFee;
+
     @OneToMany(mappedBy = "enrollment", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @Builder.Default // Inicializar com Builder
-    private List<Invoice> invoices = new ArrayList<>(); // Inicializar a lista
+    @Builder.Default
+    private List<InvoiceItem> invoiceItems = new ArrayList<>(); // Inicializar a lista
 
     @PrePersist
     protected void onCreate() {
