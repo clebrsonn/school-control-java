@@ -12,7 +12,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -26,9 +25,8 @@ import org.springframework.validation.annotation.Validated;
 public class CreateResponsible {
 
     private final ResponsibleRepository responsibleRepository;
-    private final PasswordEncoder passwordEncoder;
     private final VerificationTokenRepository tokenRepository;
-    private final Notifications notifications; // Injetar EmailService
+    private final Notifications notifications;
 
     /**
      * Executa a lógica de negócio para criar um novo Responsável.

@@ -2,17 +2,16 @@ package br.com.hyteck.school_control.models.classrooms;
 
 import br.com.hyteck.school_control.exceptions.DuplicateResourceException;
 import br.com.hyteck.school_control.models.AbstractModel;
-import br.com.hyteck.school_control.models.payments.Invoice; // Importar Invoice
 import br.com.hyteck.school_control.models.payments.InvoiceItem;
 import br.com.hyteck.school_control.repositories.EnrollmentRepository;
 import jakarta.persistence.*;
-import lombok.*; // Usar Lombok
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList; // Inicializar a lista
-import java.util.List; // Usar List
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "enrollments")
@@ -25,8 +24,7 @@ public class Enrollment extends AbstractModel {
     public enum Status {
         ACTIVE,
         PENDING,
-        CANCELLED,
-        TRANSFERRED
+        CANCELLED
     }
 
     @Enumerated(EnumType.STRING)

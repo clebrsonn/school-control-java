@@ -33,7 +33,7 @@ public class EmailService implements Notifications {
     }
 
     public void send(VerificationToken verificationToken) {
-        String subject = "Ativação de Conta - School Control";
+        String subject = "Ativação de Conta - Espaço do Saber";
         final String messageBody = getBodyMessage(verificationToken);
 
         try {

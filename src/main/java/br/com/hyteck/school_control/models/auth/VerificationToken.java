@@ -1,6 +1,5 @@
 package br.com.hyteck.school_control.models.auth;
 
-import br.com.hyteck.school_control.models.AbstractModel; // Ou apenas ID Long
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
