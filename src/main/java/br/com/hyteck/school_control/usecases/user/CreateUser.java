@@ -38,7 +38,7 @@ public class CreateUser {
     private final RoleRepository roleRepository;
 
     private final VerificationTokenRepository tokenRepository;
-    private final Notifications notifications; // Injetar EmailService
+    private final Notifications notifications;
 
     @Transactional
     public UserResponse execute(@Valid UserRequest requestDTO) {

@@ -52,7 +52,7 @@ public class CreateResponsible {
         Responsible responsibleToSave = ResponsibleRequest.to(requestDTO);
 
         responsibleToSave.setUsername(responsibleToSave.getEmail());
-        responsibleToSave.setPassword(passwordEncoder.encode(RandomStringUtils.secure().nextAlphanumeric(10)));
+        responsibleToSave.setPassword(RandomStringUtils.secure().nextAlphanumeric(10));
 
         responsibleToSave.setCredentialsNonExpired(true);
         Responsible savedResponsible = responsibleRepository.save(responsibleToSave);
@@ -68,7 +68,6 @@ public class CreateResponsible {
             }
         });
 
-        // 4. Mapear Entidade salva para DTO de Resposta
         return ResponsibleResponse.from(savedResponsible);
     }
 }

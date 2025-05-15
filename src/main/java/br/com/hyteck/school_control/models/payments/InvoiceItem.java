@@ -9,7 +9,7 @@ import lombok.*;
 import java.math.BigDecimal;
 
 @Entity
-@Table
+@Table(name = "invoice_items")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -21,8 +21,8 @@ public class InvoiceItem extends AbstractModel {
     @JoinColumn(name = "invoice_id", nullable = false) // Item pertence a uma Fatura
     private Invoice invoice;
 
-    @Column(nullable = false, length = 255)
-    private String description; // Ex: "Mensalidade Outubro", "Taxa de Material"
+    @Column(nullable = false)
+    private String description;
 
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal amount; // Valor deste item

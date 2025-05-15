@@ -1,17 +1,15 @@
 package br.com.hyteck.school_control.models.auth;
 
+import br.com.hyteck.school_control.config.encoder.UserEntityListener;
 import br.com.hyteck.school_control.models.AbstractModel;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.apache.commons.lang3.RandomStringUtils;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
@@ -20,6 +18,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@EntityListeners(value= UserEntityListener.class)
 @Entity
 @Table(name = "users")
 @Getter
@@ -34,7 +33,7 @@ public class User extends AbstractModel implements UserDetails {
     private String username;
 
     @Column(nullable = false)
-    private String password; // Store hashed passwords!
+    private String password;
 
     @Column(unique = true, nullable = false)
     private String email;

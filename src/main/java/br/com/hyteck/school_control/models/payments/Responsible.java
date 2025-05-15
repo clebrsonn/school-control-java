@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Set;
 
 @Entity
-@Table
+@Table(name = "responsibles")
 @Getter
 @Setter
 @AllArgsConstructor

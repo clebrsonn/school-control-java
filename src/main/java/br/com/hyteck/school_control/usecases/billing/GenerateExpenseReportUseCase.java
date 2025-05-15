@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import br.com.hyteck.school_control.models.expenses.Expense;
-import br.com.hyteck.school_control.models.expenses.ExpenseReport;
+import br.com.hyteck.school_control.web.dtos.expenses.ExpenseReport;
 import br.com.hyteck.school_control.repositories.ExpenseRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

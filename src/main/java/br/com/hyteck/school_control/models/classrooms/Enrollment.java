@@ -15,7 +15,7 @@ import java.util.ArrayList; // Inicializar a lista
 import java.util.List; // Usar List
 
 @Entity
-@Table
+@Table(name = "enrollments")
 @Getter
 @Setter
 @AllArgsConstructor

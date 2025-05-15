@@ -72,6 +72,10 @@ public class EmailService implements Notifications {
             backoff = @Backoff(delay = 2000, multiplier = 2)
     )
     public void sendGenericNotificationEmail(String toEmail, String subject, String htmlBodyContent) {
+        if(toEmail.isBlank()){
+            logger.warn("Email de notificação genérica não enviado. Email vazio.");
+            return;
+        }
         MimeMessage mimeMessage = mailSender.createMimeMessage();
         try {
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");

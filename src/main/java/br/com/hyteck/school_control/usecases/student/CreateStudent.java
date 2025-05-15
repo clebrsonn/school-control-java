@@ -53,15 +53,13 @@ public class CreateStudent {
                 .name(requestDTO.name())
                 .email(requestDTO.email())
                 .cpf(requestDTO.cpf())
-                .responsible(responsible) // Asignar el responsable encontrado
-                // Los enrollments se inicializan vacíos por defecto en la entidad
+                .responsible(responsible)
                 .build();
 
         Student savedStudent = studentRepository.save(studentToSave);
         logger.info("Estudante '{}' criado con sucesso. ID: {}", savedStudent.getName(), savedStudent.getId());
 
-        createEnrollment.execute(new EnrollmentRequest(savedStudent.getId(), requestDTO.classroom(), null, null));
-        // 5. Mapear la entidad guardada a DTO de Respuesta
+        createEnrollment.execute(new EnrollmentRequest(savedStudent.getId(), requestDTO.classroom(), requestDTO.enrollmentFee(), requestDTO.monthyFee()));
         return StudentResponse.from(savedStudent);
     }
 }

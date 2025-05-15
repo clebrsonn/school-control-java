@@ -1,4 +1,4 @@
-package br.com.hyteck.school_control.models.expenses;
+package br.com.hyteck.school_control.web.dtos.expenses;
 
 import lombok.experimental.SuperBuilder;
 

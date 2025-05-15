@@ -1,6 +1,6 @@
 package br.com.hyteck.school_control.web.controllers;
 
-import br.com.hyteck.school_control.models.expenses.ExpenseReport;
+import br.com.hyteck.school_control.web.dtos.expenses.ExpenseReport;
 import br.com.hyteck.school_control.usecases.billing.GenerateExpenseReportUseCase;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
