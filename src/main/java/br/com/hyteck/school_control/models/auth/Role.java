@@ -12,7 +12,7 @@ import lombok.*;
 @Builder
 public class Role {
     @Id
-    @Column(length = 50) // Role names are usually shorter
-    private String name; // e.g., "ROLE_USER", "ROLE_ADMIN"
+    @Column(length = 50)
+    private String name;
 
 }

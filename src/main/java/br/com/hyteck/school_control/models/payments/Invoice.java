@@ -1,19 +1,19 @@
 package br.com.hyteck.school_control.models.payments;
 
 import br.com.hyteck.school_control.models.AbstractModel;
-import br.com.hyteck.school_control.models.classrooms.Enrollment;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
-import lombok.*; // Adicionar Lombok
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
-import java.time.LocalDate; // Usar LocalDate para datas sem hora
-import java.time.YearMonth; // Para representar o mês/ano de referência
+import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Entity
 @Table(name = "invoices")
@@ -25,37 +25,48 @@ import java.util.List;
 public class Invoice extends AbstractModel {
 
     @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @Builder.Default // Use @Builder.Default se usar Lombok @Builder
+    @Builder.Default
     private List<InvoiceItem> items = new ArrayList<>();
 
     @NotNull
     @Positive
-    @Column(nullable = false, precision = 10, scale = 2) // Precisão para dinheiro
-    private BigDecimal amount; // Valor da fatura
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal amount;
 
     @NotNull
     @FutureOrPresent
     @Column(nullable = false)
-    private LocalDate dueDate; // Data de vencimento
+    private LocalDate dueDate;
 
     @Column(nullable = false)
-    private LocalDate issueDate; // Data de emissão
+    private LocalDate issueDate;
 
     @NotNull
     @Column(nullable = false)
-    private YearMonth referenceMonth; // Mês e ano de referência (ex: 2024-08)
+    private YearMonth referenceMonth;
 
     @NotNull
-    @Enumerated(EnumType.STRING) // Armazena o nome do enum ("PENDING", "PAID")
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private InvoiceStatus status;
 
-    // Relacionamento inverso com Payment (uma fatura pode ter um pagamento)
     @OneToOne(mappedBy = "invoice", cascade = CascadeType.ALL)
-    private Payment payment; // O pagamento que quitou esta fatura (pode ser null)
+    private Payment payment;
 
-    // Outros campos úteis: description, discount, penalty, etc.
     private String description;
+
+    @ManyToMany
+    @JoinTable(
+            name = "invoice_discounts",
+            joinColumns = @JoinColumn(name = "invoice_id"),
+            inverseJoinColumns = @JoinColumn(name = "discount_id")
+    )
+    @Builder.Default
+    private List<Discount> discounts = new ArrayList<>();
+
+    @Column(name = "penalty", precision = 10, scale = 2)
+    @Builder.Default
+    private BigDecimal penalty = BigDecimal.ZERO; // valor fixo de R$10,00
 
     @ManyToOne
     @JoinColumn(name = "responsible_id")
@@ -66,9 +77,31 @@ public class Invoice extends AbstractModel {
         item.setInvoice(this);
     }
 
+    @PrePersist
+    @PreUpdate
+    private void calculateTotal() {
+        this.amount = calculateTotalAmount();
+    }
+
     public BigDecimal calculateTotalAmount() {
-        return items.stream()
+        BigDecimal discountCalculated = BigDecimal.ZERO;
+        BigDecimal total = items.stream()
                 .map(InvoiceItem::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        for (Discount discount : discounts) {
+            Optional<InvoiceItem> item = items.stream().filter(invoiceItem -> invoiceItem.getType().equals(discount.getType())).findFirst();
+            if (item.isPresent()) {
+                discountCalculated = discountCalculated.add(discount.getValue());
+            }
+        }
+        total = total.subtract(discountCalculated.max(BigDecimal.ZERO));
+
+        if (payment != null && payment.getPaymentDate().isAfter(dueDate.atStartOfDay())) {
+            penalty= BigDecimal.TEN;
+            total = total.add(penalty);
+        }
+
+        return total.max(BigDecimal.ZERO);
     }
 }

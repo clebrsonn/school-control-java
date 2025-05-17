@@ -4,10 +4,7 @@ import br.com.hyteck.school_control.exceptions.ResourceNotFoundException;
 import br.com.hyteck.school_control.models.classrooms.ClassRoom;
 import br.com.hyteck.school_control.models.classrooms.Enrollment;
 import br.com.hyteck.school_control.models.classrooms.Student;
-import br.com.hyteck.school_control.models.payments.Invoice;
-import br.com.hyteck.school_control.models.payments.InvoiceItem;
-import br.com.hyteck.school_control.models.payments.InvoiceStatus;
-import br.com.hyteck.school_control.models.payments.Responsible;
+import br.com.hyteck.school_control.models.payments.*;
 import br.com.hyteck.school_control.repositories.ClassroomRepository;
 import br.com.hyteck.school_control.repositories.EnrollmentRepository;
 import br.com.hyteck.school_control.repositories.InvoiceRepository;
@@ -64,6 +61,7 @@ public class CreateEnrollment {
                 .classroom(classRoom)
                 .status(Enrollment.Status.ACTIVE)
                 .monthlyFee(requestDTO.monthyFee() != null ? requestDTO.monthyFee() : new BigDecimal(110)) // <<< Popula a mensalidade 110) // <<< Popula a mensalidade
+                .enrollmentFee(requestDTO.enrollmentFee() != null ? requestDTO.enrollmentFee() : new BigDecimal(30)) // <<< Popula a mensalidade 110) // <<< Popula a mensalidade
                 .build();
 
         newEnrollment.validateEnrollmentRules(enrollmentRepository);
@@ -95,13 +93,14 @@ public class CreateEnrollment {
                 .build();
 
         InvoiceItem feeItem = InvoiceItem.builder()
-                .enrollment(enrollment) // Liga o item à matrícula
+                .enrollment(enrollment)
                 .description("Taxa de Matrícula - Aluno: " + enrollment.getStudent().getName())
                 .amount(feeAmount)
+                .type(Types.MATRICULA)
                 .build();
 
-        feeInvoice.addItem(feeItem); // Adiciona o item à fatura e estabelece a relação bidirecional
-        feeInvoice.setAmount(feeInvoice.calculateTotalAmount()); // Calcula o valor total da fatura
+        feeInvoice.addItem(feeItem);
+        feeInvoice.setAmount(feeInvoice.calculateTotalAmount());
 
         invoiceRepository.save(feeInvoice); // Salva a fatura (e o item por cascata)
         log.info("Fatura da taxa de matrícula ID {} criada para enrollment {}", feeInvoice.getId(), enrollment.getId());

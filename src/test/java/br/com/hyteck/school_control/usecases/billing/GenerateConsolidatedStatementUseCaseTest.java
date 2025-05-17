@@ -72,7 +72,7 @@ class GenerateConsolidatedStatementUseCaseTest {
 
         invoice1 = Invoice.builder()
                 .id("inv-001")
-                .enrollment(enrollment1)
+                //.enrollment(enrollment1)
                 .description("Mensalidade Turma A")
                 .amount(new BigDecimal("500.00"))
                 .dueDate(LocalDate.from(referenceMonth.atDay(10).atTime(23, 59))) // Ex: 2024-08-10 23:59
@@ -83,7 +83,7 @@ class GenerateConsolidatedStatementUseCaseTest {
 
         invoice2 = Invoice.builder()
                 .id("inv-002")
-                .enrollment(enrollment2)
+                //.enrollment(enrollment2)
                 .description("Taxa Matrícula")
                 .amount(new BigDecimal("150.50"))
                 .dueDate(LocalDate.from(referenceMonth.atDay(5).atTime(23, 59))) // Ex: 2024-08-05 23:59
@@ -206,7 +206,7 @@ class GenerateConsolidatedStatementUseCaseTest {
         // Arrange
         Invoice paidInvoice = Invoice.builder()
                 .id("inv-paid")
-                .enrollment(enrollment1)
+                //.enrollment(enrollment1)
                 .description("Mensalidade Paga")
                 .amount(new BigDecimal("300.00"))
                 .status(InvoiceStatus.PAID)
@@ -234,7 +234,7 @@ class GenerateConsolidatedStatementUseCaseTest {
         // Arrange
         Invoice invalidInvoice = Invoice.builder()
                 .id("inv-invalid")
-                .enrollment(null) // Enrollment nulo
+                //.enrollment(null) // Enrollment nulo
                 .description("Fatura inválida")
                 .amount(new BigDecimal("100.00"))
                 .status(InvoiceStatus.PENDING)

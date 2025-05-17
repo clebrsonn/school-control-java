@@ -124,7 +124,7 @@ public class GenerateConsolidatedStatementUseCase {
             List<StatementLineItem> items = invoice.getItems().stream()
                     .map(item -> new StatementLineItem(invoice.getId(),
                             item.getEnrollment().getStudent().getName()
-                            , ("Mensalidade " + item.getEnrollment().getClassroom().getName() + " - " + referenceMonth.toString()) // Exemplo
+                            , item.getDescription() // Exemplo
                             , (invoice.getAmount())
                             , (invoice.getDueDate())
                     ))

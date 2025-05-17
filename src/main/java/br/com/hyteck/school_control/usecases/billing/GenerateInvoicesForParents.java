@@ -1,10 +1,8 @@
 package br.com.hyteck.school_control.usecases.billing;
 
 import br.com.hyteck.school_control.models.classrooms.Enrollment;
-import br.com.hyteck.school_control.models.payments.Invoice;
-import br.com.hyteck.school_control.models.payments.InvoiceItem;
-import br.com.hyteck.school_control.models.payments.InvoiceStatus;
-import br.com.hyteck.school_control.models.payments.Responsible;
+import br.com.hyteck.school_control.models.payments.*;
+import br.com.hyteck.school_control.repositories.DiscountRepository;
 import br.com.hyteck.school_control.repositories.EnrollmentRepository;
 import br.com.hyteck.school_control.repositories.InvoiceRepository;
 import br.com.hyteck.school_control.usecases.notification.CreateNotification;
@@ -13,19 +11,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.text.NumberFormat; // Para formatar moeda
+import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.YearMonth;
-import java.time.format.DateTimeFormatter; // Para formatar data
+import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
 @Service
 @Log4j2
 public class GenerateInvoicesForParents {
+    private final DiscountRepository discountRepository;
 
     private final EnrollmentRepository enrollmentRepository;
     private final InvoiceRepository invoiceRepository;
@@ -37,10 +33,12 @@ public class GenerateInvoicesForParents {
 
 
     public GenerateInvoicesForParents(EnrollmentRepository enrollmentRepository,
-                                      InvoiceRepository invoiceRepository, CreateNotification createNotification) { // <<< ADICIONAR AO CONSTRUTOR
+                                      InvoiceRepository invoiceRepository, CreateNotification createNotification,
+                                      DiscountRepository discountRepository) { // <<< ADICIONAR AO CONSTRUTOR
         this.enrollmentRepository = enrollmentRepository;
         this.invoiceRepository = invoiceRepository;
         this.createNotification = createNotification;
+        this.discountRepository = discountRepository;
     }
 
     @Transactional
@@ -50,8 +48,9 @@ public class GenerateInvoicesForParents {
         List<Enrollment> activeEnrollments = enrollmentRepository.findByStatus(Enrollment.Status.ACTIVE);
         log.info("Encontradas {} matrículas ativas.", activeEnrollments.size());
 
-        Map<String, Invoice> invoicesByResponsibles = new HashMap<>();
+        Optional<Discount> discount = discountRepository.findByTypeAndValidAtBeforeToday(Types.MENSALIDADE);
 
+        Map<String, Invoice> invoicesByResponsibles = new HashMap<>();
         for (Enrollment enrollment : activeEnrollments) {
             if (enrollment.getMonthlyFee() == null || enrollment.getMonthlyFee().compareTo(BigDecimal.ZERO) <= 0) {
                 log.warn("Matrícula ID {} (Aluno: {}) não possui valor de mensalidade definido ou é zero. Pulando.",
@@ -70,7 +69,8 @@ public class GenerateInvoicesForParents {
             boolean alreadyBilled = invoiceRepository.existsByResponsibleIdAndReferenceMonthAndItems_Enrollment_Id(
                     responsible.getId(),
                     targetMonth,
-                    enrollment.getId()
+                    enrollment.getId(),
+                    Types.MENSALIDADE
             );
 
             if (alreadyBilled) {
@@ -78,6 +78,7 @@ public class GenerateInvoicesForParents {
                         enrollment.getId(), enrollment.getStudent().getName(), targetMonth, responsible.getId());
                 continue;
             }
+
             Invoice monthlyInvoice;
             if(!invoicesByResponsibles.containsKey(enrollment.getStudent().getResponsible().getId())){
                 LocalDate dueDate= LocalDate.now().getDayOfMonth() > 10 ?LocalDate.of(targetMonth.getYear(), targetMonth.getMonthValue()+1, 10) : targetMonth.atDay(10);
@@ -94,11 +95,13 @@ public class GenerateInvoicesForParents {
 
             }else{
                 monthlyInvoice= invoicesByResponsibles.get(enrollment.getStudent().getResponsible().getId());
+                discount.ifPresent(value -> monthlyInvoice.setDiscounts(List.of(value)));
+
             }
 
-            // Criar o InvoiceItem para a mensalidade
             InvoiceItem monthlyFeeItem = InvoiceItem.builder()
                     .enrollment(enrollment)
+                    .type(Types.MENSALIDADE)
                     .description("Mensalidade " + targetMonth.getMonth().getDisplayName(TextStyle.FULL, BRAZIL_LOCALE) + "/" + targetMonth.getYear() +
                             " - Aluno: " + enrollment.getStudent().getName())
                     .amount(enrollment.getMonthlyFee())
@@ -109,7 +112,7 @@ public class GenerateInvoicesForParents {
         }
 
 
-        List<Invoice> savedInvoices = invoiceRepository.saveAll(invoicesByResponsibles.values()); // Salva e obtém o ID
+        List<Invoice> savedInvoices = invoiceRepository.saveAll(invoicesByResponsibles.values());
 
         // --- DISPARAR NOTIFICAÇÃO ---
         invoicesByResponsibles.forEach((key, value) -> {

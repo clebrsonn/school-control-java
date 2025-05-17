@@ -1,6 +1,5 @@
 package br.com.hyteck.school_control.usecases.notification;
 
-import br.com.hyteck.school_control.models.Notification;
 import br.com.hyteck.school_control.models.auth.VerificationToken;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -17,7 +16,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service
-public class EmailService implements Notifications {
+public class EmailService {
 
     private static final Logger logger = LoggerFactory.getLogger(EmailService.class);
     private final JavaMailSender mailSender;
@@ -32,18 +31,13 @@ public class EmailService implements Notifications {
         this.mailSender = mailSender;
     }
 
+    @Async
     public void send(VerificationToken verificationToken) {
         String subject = "Ativação de Conta - Espaço do Saber";
-        final String messageBody = getBodyMessage(verificationToken);
 
-        try {
-            sendGenericNotificationEmail(verificationToken.getUser().getEmail(), subject, messageBody);
+        sendGenericNotificationEmail(verificationToken.getUser().getEmail(), subject, getBodyMessage(verificationToken));
 
-            logger.info("Email de verificação enviado para {}", verificationToken.getUser().getEmail());
-        } catch (MailException e) {
-            logger.error("Erro ao enviar email de verificação para {}: {}", verificationToken.getUser().getEmail(), e.getMessage());
-            throw e;
-        }
+        logger.info("Email de verificação enviado para {}", verificationToken.getUser().getEmail());
     }
 
     private String getBodyMessage(VerificationToken verificationToken) {
@@ -61,12 +55,7 @@ public class EmailService implements Notifications {
                 """.formatted(verificationUrl);
     }
 
-    // Dentro de EmailService.java (exemplo de adaptação)
-
-// ... (código existente)
-
     @SneakyThrows
-    @Async
     @Retryable(
             retryFor = {MailException.class, MessagingException.class},
             backoff = @Backoff(delay = 2000, multiplier = 2)
@@ -92,21 +81,4 @@ public class EmailService implements Notifications {
         }
     }
 
-    // Método para construir o corpo do email a partir de uma Notification (exemplo)
-    public String buildEmailBodyFromNotification(Notification notification) {
-        String title = "Nova Notificação - School Control"; // Ou baseado no notification.getType()
-        String callToAction = notification.getLink() != null ?
-                String.format("<p><a href=\"%s%s\">Clique aqui para ver os detalhes</a></p>", appBaseUrl, notification.getLink()) :
-                "";
-
-        return String.format("""
-                <html><body>
-                <h2>%s</h2>
-                <p>%s</p>
-                %s
-                <br/>
-                <p>Atenciosamente,<br/>Equipe School Control</p>
-                </body></html>
-                """, title, notification.getMessage(), callToAction);
-    }
 }

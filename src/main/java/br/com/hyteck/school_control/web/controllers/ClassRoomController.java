@@ -1,11 +1,12 @@
 package br.com.hyteck.school_control.web.controllers;
 
+import br.com.hyteck.school_control.usecases.classroom.*;
 import br.com.hyteck.school_control.usecases.enrollment.FindEnrollmentsByClassRoomId;
 import br.com.hyteck.school_control.web.dtos.classroom.ClassRoomRequest;
 import br.com.hyteck.school_control.web.dtos.classroom.ClassRoomResponse;
-import br.com.hyteck.school_control.usecases.classroom.*;
 import br.com.hyteck.school_control.web.dtos.classroom.EnrollmentResponse;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -18,7 +19,8 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.net.URI;
 
 @RestController
-@RequestMapping("/classrooms") // Endpoint para turmas
+@RequestMapping("/classrooms")
+@RequiredArgsConstructor
 public class ClassRoomController {
 
     private final CreateClassRoom createClassRoom;
@@ -27,19 +29,6 @@ public class ClassRoomController {
     private final UpdateClassRoom updateClassRoom;
     private final DeleteClassRoom deleteClassRoom;
     private final FindEnrollmentsByClassRoomId findEnrollmentsByClassRoomIdUseCase;
-
-    public ClassRoomController(CreateClassRoom createClassRoom,
-                               FindClassRoomById findClassRoomById,
-                               FindClassRooms findAllClassRooms,
-                               UpdateClassRoom updateClassRoom,
-                               DeleteClassRoom deleteClassRoom, FindEnrollmentsByClassRoomId findEnrollmentsByClassRoomIdUseCase) {
-        this.createClassRoom = createClassRoom;
-        this.findClassRoomById = findClassRoomById;
-        this.findAllClassRooms = findAllClassRooms;
-        this.updateClassRoom = updateClassRoom;
-        this.deleteClassRoom = deleteClassRoom;
-        this.findEnrollmentsByClassRoomIdUseCase = findEnrollmentsByClassRoomIdUseCase;
-    }
 
     // --- CREATE ---
     @PostMapping

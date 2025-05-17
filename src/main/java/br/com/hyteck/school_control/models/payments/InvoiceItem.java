@@ -18,18 +18,21 @@ import java.math.BigDecimal;
 public class InvoiceItem extends AbstractModel {
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "invoice_id", nullable = false) // Item pertence a uma Fatura
+    @JoinColumn(name = "invoice_id", nullable = false)
     private Invoice invoice;
 
     @Column(nullable = false)
     private String description;
 
     @Column(nullable = false, precision = 10, scale = 2)
-    private BigDecimal amount; // Valor deste item
+    private BigDecimal amount;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "enrollment_id")
     private Enrollment enrollment;
+
+    @Enumerated(value = EnumType.STRING)
+    private Types type;
 
     // Opcional: Outros campos para rastrear a origem (ex: qual serviço, qual produto)
     // private String sourceType; // Ex: "ENROLLMENT", "FEE", "PRODUCT"

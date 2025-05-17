@@ -1,4 +1,4 @@
-package br.com.hyteck.school_control.config.encoder;
+package br.com.hyteck.school_control.listeners;
 
 import br.com.hyteck.school_control.models.auth.User;
 import lombok.Setter;

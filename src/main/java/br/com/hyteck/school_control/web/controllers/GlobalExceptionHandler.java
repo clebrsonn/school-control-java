@@ -21,6 +21,9 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -79,23 +82,41 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiErrorResponse> handleDataIntegrityViolationException(DataIntegrityViolationException ex, HttpServletRequest request) {
-        String rootCauseMessage = getRootCauseMessage(ex);
+
 
         ApiErrorResponse errorResponse = new ApiErrorResponse(
+                Instant.now(),
                 HttpStatus.BAD_REQUEST.value(),
                 HttpStatus.BAD_REQUEST.getReasonPhrase(),
-                rootCauseMessage,
-                request.getRequestURI()
+                "Erro de integridade de dados. Verifique os campos.",
+                request.getRequestURI(),
+                getRootCauseMessage(ex)
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
 
-    private String getRootCauseMessage(Throwable throwable) {
+    private Map<String, String> getRootCauseMessage(Throwable throwable) {
         Throwable rootCause = throwable;
+
+        // Regex para pegar o campo e valor duplicado
+        Pattern pattern = Pattern.compile("Key \\((.*?)\\)=\\((.*?).*\\)");
+        Map<String, String> errors = new HashMap<>();
+
+        logger.error("Error", throwable);
+
         while (rootCause.getCause() != null && rootCause != rootCause.getCause()) {
+            String rawMessage = rootCause.getMessage();
+            logger.error("Erro bruto: {}", rawMessage);
+
+            Matcher matcher = pattern.matcher(rawMessage);
+
+            if (matcher.find()) {
+                errors.put( matcher.group(1), Objects.requireNonNull(((DataIntegrityViolationException) throwable).getRootCause()).getLocalizedMessage());
+            }
+
             rootCause = rootCause.getCause();
         }
-        return rootCause.getMessage();
+        return errors;
     }
 
 

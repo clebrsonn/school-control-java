@@ -7,6 +7,9 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.Year;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,6 +27,10 @@ public class ClassRoom extends AbstractModel {
     private List<Enrollment> enrollments = new ArrayList<>();
 
     private String year;
+
+    private LocalTime endTime;
+
+    private LocalTime startTime;
 
     // --- NOVO MÉTODO DE COMPORTAMENTO ---
     /**

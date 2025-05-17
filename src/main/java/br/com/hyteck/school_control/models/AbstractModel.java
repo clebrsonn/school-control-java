@@ -23,10 +23,12 @@ public abstract class AbstractModel {
 
     @CreationTimestamp
     @CreatedDate
+    @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @UpdateTimestamp
     @LastModifiedDate
+    @Column(nullable = false)
     private LocalDateTime updatedAt;
 
 }

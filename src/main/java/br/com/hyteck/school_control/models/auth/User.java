@@ -1,17 +1,14 @@
 package br.com.hyteck.school_control.models.auth;
 
-import br.com.hyteck.school_control.config.encoder.UserEntityListener;
+import br.com.hyteck.school_control.listeners.UserEntityListener;
 import br.com.hyteck.school_control.models.AbstractModel;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Objects;
@@ -44,7 +41,7 @@ public class User extends AbstractModel implements UserDetails {
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role")
     )
-    @Builder.Default // Initialize with default value when using builder
+    @Builder.Default
     private Set<Role> roles = new HashSet<>();
 
     @Builder.Default
@@ -58,17 +55,6 @@ public class User extends AbstractModel implements UserDetails {
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private VerificationToken verificationToken;
-
-    // --- Timestamps ---
-    @CreationTimestamp
-    @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    @Column(nullable = false)
-    private LocalDateTime updatedAt;
-
-    // --- UserDetails implementation ---
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

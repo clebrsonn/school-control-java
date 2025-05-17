@@ -1,7 +1,7 @@
 package br.com.hyteck.school_control.config;
 
 import br.com.hyteck.school_control.config.jwt.JwtAuthenticationFilter;
-import br.com.hyteck.school_control.config.jwt.provider.JWTProvider;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -13,7 +13,6 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -21,10 +20,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -35,16 +31,12 @@ import java.util.List;
  * @since 2023-03-01
  */
 @Configuration
-@EnableWebSecurity 
+@EnableWebSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final JWTProvider tokenProvider;
-    private final UserDetailsService userDetailsService;
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    public SecurityConfig(JWTProvider tokenProvider, UserDetailsService userDetailsService) {
-        this.tokenProvider = tokenProvider;
-        this.userDetailsService = userDetailsService;
-    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -84,29 +76,24 @@ public class SecurityConfig {
                         .requestMatchers("/auth/login", "/auth/verify/**").permitAll()
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtRequestFilter(tokenProvider, userDetailsService), UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .exceptionHandling(exceptionHandling -> exceptionHandling
                         .authenticationEntryPoint((request, response, authException) -> {
                             response.setContentType("application/json");
                             response.setStatus(HttpStatus.UNAUTHORIZED.value());
                             response.getWriter().write(
-                                    "{ \"error\": \"Unauthorized\", \"message\": "+ authException.getMessage() +" }"
+                                    "{ \"error\": \"Unauthorized\", \"message\": \"" + authException.getMessage() + "\" }"
                             );
                         })
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
                             response.setContentType("application/json");
                             response.setStatus(HttpStatus.FORBIDDEN.value());
                             response.getWriter().write(
-                                    "{ \"error\": \"Forbidden\", \"message\": "+ accessDeniedException.getMessage() +" }"
+                                    "{ \"error\": \"Forbidden\", \"message\": \"" + accessDeniedException.getMessage() + "\" }"
                             );
                         })
                 );
         return http.build();
-    }
-
-    public JwtAuthenticationFilter jwtRequestFilter(final JWTProvider jwtUserDetailsService,
-                                                    final UserDetailsService userDetailsService) {
-        return new JwtAuthenticationFilter(jwtUserDetailsService, userDetailsService);
     }
 
     @Bean

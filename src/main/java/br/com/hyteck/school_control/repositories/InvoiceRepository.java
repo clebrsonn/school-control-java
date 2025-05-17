@@ -2,6 +2,7 @@ package br.com.hyteck.school_control.repositories;
 
 import br.com.hyteck.school_control.models.payments.Invoice;
 import br.com.hyteck.school_control.models.payments.InvoiceStatus;
+import br.com.hyteck.school_control.models.payments.Types;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -59,11 +60,14 @@ public interface InvoiceRepository extends JpaRepository<Invoice, String> {
             "FROM Invoice inv JOIN inv.items item " +
             "WHERE inv.responsible.id = :responsibleId " +
             "AND inv.referenceMonth = :referenceMonth " +
-            "AND item.enrollment.id = :enrollmentId")
+            "AND inv.referenceMonth = :referenceMonth " +
+            "AND item.enrollment.id = :enrollmentId " +
+            "AND item.type = :type")
     boolean existsByResponsibleIdAndReferenceMonthAndItems_Enrollment_Id(
             @Param("responsibleId") String responsibleId,
             @Param("referenceMonth") YearMonth referenceMonth,
-            @Param("enrollmentId") String enrollmentId
+            @Param("enrollmentId") String enrollmentId,
+            @Param("type") Types type
     );
 
     long countByStatus(InvoiceStatus status);

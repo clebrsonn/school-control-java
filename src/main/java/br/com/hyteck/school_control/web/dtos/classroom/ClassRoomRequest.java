@@ -3,6 +3,9 @@ package br.com.hyteck.school_control.web.dtos.classroom;
 import br.com.hyteck.school_control.models.classrooms.ClassRoom;
 import jakarta.validation.constraints.*;
 
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+
 // Adicione outras validações conforme necessário (ex: formato do ano)
 
 /**
@@ -13,19 +16,20 @@ public record ClassRoomRequest(
         @Size(min = 2)
         String name,
 
-//        @NotNull
-//        @Positive
-//        Integer capacity,
-
         @NotNull
         @Pattern(regexp = "^\\d{4}$")
-        String schoolYear // Ou String
-        // Adicione outros campos como 'shift' se houver
+        String schoolYear,
+        LocalTime startTime,
+        LocalTime endTime
+
 ) {
 
     public static ClassRoom to(ClassRoomRequest dto) {
         return ClassRoom.builder()
                 .name(dto.name())
+                .endTime(dto.endTime())
+                .startTime(dto.startTime())
+
 //                .capacity(dto.capacity())
                 .year(dto.schoolYear())
                 // Mapear outros campos
