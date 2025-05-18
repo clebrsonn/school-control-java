@@ -27,8 +27,9 @@ public record ClassRoomResponse(
                 classRoom.getId(),
                 classRoom.getName(),
                 classRoom.getYear(),
-                classRoom.getEndTime(),
-                classRoom.getStartTime()
-        );
+                classRoom.getStartTime(),
+                classRoom.getEndTime()
+
+                );
     }
 }

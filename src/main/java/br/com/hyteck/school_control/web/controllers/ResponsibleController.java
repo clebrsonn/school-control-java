@@ -63,8 +63,8 @@ public class ResponsibleController {
         return ResponseEntity.created(location).body(createdResponsible);
     }
 
-    @PostMapping
-    public void createResponsible(
+    @PostMapping("/bulk")
+    public void createBulkResponsible(
             @Valid @RequestBody List<ResponsibleRequest> requestDTOs) {
         for (ResponsibleRequest requestDTO : requestDTOs) {
             createResponsibleUseCase.execute(requestDTO);
