@@ -14,6 +14,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+
 @Service
 @Validated
 @Log4j2
@@ -37,7 +40,12 @@ public class CreateResponsible {
         log.info("Iniciando criação de responsável para email: {}", requestDTO.email());
 
         Responsible responsibleToSave = ResponsibleRequest.to(requestDTO);
+        if(responsibleToSave.getEmail().isBlank()){
+            long uuid = LocalDateTime.now().toEpochSecond(ZoneOffset.UTC);
+            String email= "resp_" + uuid + "@dominio.com";
+            responsibleToSave.setEmail(email);
 
+        }
         responsibleToSave.setUsername(RandomStringUtils.insecure().next(10));
         responsibleToSave.setPassword(RandomStringUtils.secure().nextAlphanumeric(10));
 

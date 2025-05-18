@@ -16,7 +16,6 @@ public record StudentRequest(
         @Size(max = 255)
         String name,
 
-        @NotBlank
         @Email
         @Size(max = 100)
         String email,
