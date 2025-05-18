@@ -63,6 +63,21 @@ public class ResponsibleController {
         return ResponseEntity.created(location).body(createdResponsible);
     }
 
+    @PostMapping
+    public void createResponsible(
+            @Valid @RequestBody List<ResponsibleRequest> requestDTOs) {
+        for (ResponsibleRequest requestDTO : requestDTOs) {
+            createResponsibleUseCase.execute(requestDTO);
+        }
+//        ResponsibleResponse createdResponsible = createResponsibleUseCase.execute(requestDTO);
+//        URI location = ServletUriComponentsBuilder
+//                .fromCurrentRequest()
+//                .path("/{id}")
+//                .buildAndExpand(createdResponsible.id())
+//                .toUri();
+    }
+
+
     @GetMapping("/{id}")
     public ResponseEntity<ResponsibleResponse> getResponsibleById(@PathVariable String id) {
         // O Use Case retorna Optional, o map/orElseGet lida com o 404
