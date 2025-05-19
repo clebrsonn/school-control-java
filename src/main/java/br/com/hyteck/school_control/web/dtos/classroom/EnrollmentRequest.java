@@ -11,7 +11,7 @@ public record EnrollmentRequest(
         @NotBlank
         String studentId,
 
-        @NotBlank
+        //@NotBlank
         String classRoomId,
 
         String classroomName,
