@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.Collection;
@@ -53,6 +54,10 @@ public interface InvoiceRepository extends JpaRepository<Invoice, String> {
             @Param("statuses") Collection<InvoiceStatus> statuses
     );
 
+    @Query("SELECT COALESCE(SUM(inv.amount), 0) FROM Invoice inv WHERE inv.referenceMonth = :referenceMonth AND inv.status IN :statuses")
+    BigDecimal sumAmountByReferenceMonthAndStatuses(
+            @Param("referenceMonth") YearMonth referenceMonth,
+            @Param("statuses") Collection<InvoiceStatus> statuses);
 
     List<Invoice> findByStatusAndDueDateBefore(InvoiceStatus status, LocalDate dueDate);
 

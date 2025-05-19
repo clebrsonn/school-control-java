@@ -1,10 +1,12 @@
 package br.com.hyteck.school_control.web.controllers;
 
 import br.com.hyteck.school_control.models.payments.InvoiceStatus;
+import br.com.hyteck.school_control.services.InvoiceCalculationService;
 import br.com.hyteck.school_control.usecases.billing.CountInvoicesByStatus;
 import br.com.hyteck.school_control.usecases.billing.GenerateConsolidatedStatementUseCase;
 import br.com.hyteck.school_control.usecases.billing.GenerateInvoicesForParents;
 import br.com.hyteck.school_control.web.dtos.billing.ConsolidatedStatement;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -12,11 +14,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Optional;
 
 @Slf4j
+@AllArgsConstructor
 @RestController
 @RequestMapping("/billing")
 public class BillingController {
@@ -24,12 +28,8 @@ public class BillingController {
     private final GenerateConsolidatedStatementUseCase generateStatementUseCase;
     private final GenerateInvoicesForParents generateInvoicesForParents;
     private final CountInvoicesByStatus countInvoicesByStatus;
+    private final InvoiceCalculationService invoiceCalculationService;
 
-    public BillingController(GenerateConsolidatedStatementUseCase generateStatementUseCase, GenerateInvoicesForParents generateInvoicesForParents, CountInvoicesByStatus countInvoicesByStatus) {
-        this.generateStatementUseCase = generateStatementUseCase;
-        this.generateInvoicesForParents = generateInvoicesForParents;
-        this.countInvoicesByStatus = countInvoicesByStatus;
-    }
 
     @GetMapping("/responsibles/{responsibleId}/statements/{yearMonth}")
     public ResponseEntity<ConsolidatedStatement> getConsolidatedStatementForResponsible(
@@ -66,6 +66,13 @@ public class BillingController {
     public ResponseEntity<Long> countInvoicesByStatus(@PathVariable InvoiceStatus status){
         return ResponseEntity.ok(countInvoicesByStatus.execute(status));
     }
+
+    @GetMapping("/total-month/{referenceMonth}")
+    public BigDecimal getTotalToReceive(
+            @PathVariable("referenceMonth") @DateTimeFormat(pattern = "yyyy-MM") YearMonth referenceMonth) {
+        return invoiceCalculationService.calcularTotalAReceberNoMes(referenceMonth);
+    }
+
 
     // --- Endpoint para Processar Pagamento Consolidado (Exemplo de Webhook) ---
     // Este endpoint seria chamado pelo seu gateway de pagamento após a confirmação
