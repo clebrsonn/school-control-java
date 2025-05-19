@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
+import java.util.List;
 
 @RestController
 @RequestMapping("/students")
@@ -45,6 +46,14 @@ public class StudentController {
                 .toUri();             // Convierte a URI
 
         return ResponseEntity.created(location).body(createdStudent);
+    }
+
+    @PostMapping("/bulk")
+    @PreAuthorize("hasRole('ADMIN')")
+    public void createStudent(@Valid @RequestBody List<StudentRequest> requestDTOs) {
+        for (StudentRequest requestDTO : requestDTOs) {
+            createStudentUseCase.execute(requestDTO);
+        }
     }
 
     @GetMapping("/{id}")

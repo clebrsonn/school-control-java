@@ -43,11 +43,21 @@ public class CreateStudent {
 //        if (studentRepository.existsByEmail(requestDTO.email())) {
 //            throw new DuplicateResourceException("Já existe um estudante com o email: " + requestDTO.email());
 //        }
+        Responsible responsible;
+        if (requestDTO.responsibleId() == null) {
+            responsible = responsibleRepository.findByPhone(requestDTO.responsiblePhone()).orElseThrow(
+                    () -> new ResourceNotFoundException(
+                            "Responsável não encontrado: " + requestDTO.responsiblePhone()
+                    )
+            );
 
-        Responsible responsible = responsibleRepository.findById(requestDTO.responsibleId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Responsável não encontrado: " + requestDTO.responsibleId()
-                ));
+        } else {
+            responsible = responsibleRepository.findById(requestDTO.responsibleId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Responsável não encontrado: " + requestDTO.responsibleId()
+                    ));
+        }
+
 
         Student studentToSave = Student.builder()
                 .name(requestDTO.name())
@@ -58,8 +68,7 @@ public class CreateStudent {
 
         Student savedStudent = studentRepository.save(studentToSave);
         logger.info("Estudante '{}' criado con sucesso. ID: {}", savedStudent.getName(), savedStudent.getId());
-
-        createEnrollment.execute(new EnrollmentRequest(savedStudent.getId(), requestDTO.classroom(), requestDTO.enrollmentFee(), requestDTO.monthyFee()));
+        createEnrollment.execute(new EnrollmentRequest(savedStudent.getId(), requestDTO.classroom(), requestDTO.className(),  requestDTO.enrollmentFee(), requestDTO.monthyFee()));
         return StudentResponse.from(savedStudent);
     }
 }

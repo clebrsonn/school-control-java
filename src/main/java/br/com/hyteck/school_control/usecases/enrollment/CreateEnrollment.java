@@ -50,11 +50,20 @@ public class CreateEnrollment {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Estudante não encontrado com ID: " + requestDTO.studentId()
                 ));
+        ClassRoom classRoom;
+        if(requestDTO.classroomName()!= null){
+            classRoom = classRoomRepository.findByName(requestDTO.classroomName())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Turma não encontrada com Name: " + requestDTO.classroomName()
+                    ));
 
-        ClassRoom classRoom = classRoomRepository.findById(requestDTO.classRoomId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Turma não encontrada com ID: " + requestDTO.classRoomId()
-                ));
+        }else{
+            classRoom = classRoomRepository.findById(requestDTO.classRoomId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Turma não encontrada com ID: " + requestDTO.classRoomId()
+                    ));
+
+        }
 
         Enrollment newEnrollment = Enrollment.builder()
                 .student(student)

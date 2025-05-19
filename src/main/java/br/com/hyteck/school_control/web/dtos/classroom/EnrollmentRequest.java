@@ -14,6 +14,8 @@ public record EnrollmentRequest(
         @NotBlank
         String classRoomId,
 
+        String classroomName,
+
         BigDecimal enrollmentFee,
 
         BigDecimal monthyFee

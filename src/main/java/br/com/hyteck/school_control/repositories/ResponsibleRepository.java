@@ -8,4 +8,5 @@ import java.util.Optional;
 
 public interface ResponsibleRepository extends JpaRepository<Responsible, String> {
     Optional<Responsible> findByEmail(String email);
+    Optional<Responsible> findByPhone(String phone);
 }

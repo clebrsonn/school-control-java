@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 
 public interface ClassroomRepository extends JpaRepository<ClassRoom, String> {
-    Optional<ClassRoom> findByNameAndYear(String name, String year); // Ou (String, String)
-    boolean existsByNameAndYear(String name, String year); // Ou (String, String);
+    Optional<ClassRoom> findByNameAndYear(String name, String year);
+    Optional<ClassRoom> findByName(String name);
+    boolean existsByNameAndYear(String name, String year);
 }

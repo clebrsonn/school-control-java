@@ -23,10 +23,13 @@ public record StudentRequest(
         @CPF
         String cpf,
 
-        @NotNull
         String responsibleId,
 
+        String responsiblePhone,
+
         String classroom,
+
+        String className,
 
         BigDecimal enrollmentFee,
 
