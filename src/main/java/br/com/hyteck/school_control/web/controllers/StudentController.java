@@ -18,6 +18,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/students")
+@PreAuthorize("isAuthenticated()")
 public class StudentController {
 
     private final CreateStudent createStudentUseCase;
@@ -57,7 +58,6 @@ public class StudentController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("isAuthenticated()") // Qualquer um autenticado pode ver (exemplo)
     public ResponseEntity<StudentResponse> getStudentById(@PathVariable String id) {
         return findStudentByIdUseCase.execute(id)
                 .map(ResponseEntity::ok) // Se encontrou, retorna 200 OK com o corpo
@@ -66,7 +66,6 @@ public class StudentController {
 
     // GET (Listar todos com paginação)
     @GetMapping
-    @PreAuthorize("isAuthenticated()") // Qualquer um autenticado pode listar (exemplo)
     public ResponseEntity<Page<StudentResponse>> getAllStudents(
             @PageableDefault(size = 10, sort = "name") Pageable pageable) { // Define padrões de paginação
         Page<StudentResponse> studentPage = findAllStudentsUseCase.execute(pageable);

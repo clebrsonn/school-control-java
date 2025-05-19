@@ -10,8 +10,9 @@ public record StudentResponse(
         String name,
         String email,
         String cpf,
-        String responsibleId, // ID del responsable
-        String responsibleName, // Nombre del responsable para conveniencia
+        String responsibleId,
+        String responsibleName,
+        String classroom,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
@@ -25,8 +26,9 @@ public record StudentResponse(
                         student.getName(),
                         student.getEmail(),
                         student.getCpf(),
-                        responsible != null ? responsible.getId() : null, // Obtener ID del responsable
-                        responsible != null ? responsible.getName() : null, // Obtener Nombre del responsable
+                        responsible != null ? responsible.getId() : null,
+                        responsible != null ? responsible.getName() : null,
+                        student.getEnrollments().getFirst().getClassroom().getId(),
                         student.getCreatedAt(),
                         student.getUpdatedAt()
                 );
