@@ -79,17 +79,17 @@ public class GenerateInvoicesForParents {
                         enrollment.getId(), enrollment.getStudent().getName(), targetMonth, responsible.getId());
                 continue;
             }
+            LocalDate dueDate= LocalDate.now(ZoneId.of("America/Sao_Paulo")).getDayOfMonth() > 10 ? LocalDate.of(targetMonth.getYear(), targetMonth.getMonthValue()+1, 10) : targetMonth.atDay(10);
 
             Invoice monthlyInvoice;
             if(!invoicesByResponsibles.containsKey(enrollment.getStudent().getResponsible().getId())){
-                LocalDate dueDate= LocalDate.now(ZoneId.of("America/Sao_Paulo")).getDayOfMonth() > 10 ? LocalDate.of(targetMonth.getYear(), targetMonth.getMonthValue()+1, 10) : targetMonth.atDay(10);
                 monthlyInvoice= Invoice.builder()
                         .responsible(responsible)
                         .referenceMonth(targetMonth)
-                        .issueDate(LocalDate.now())
+                        .issueDate(dueDate)
                         .dueDate(dueDate)
                         .status(InvoiceStatus.PENDING)
-                        .description("Fatura Mensalidade " + targetMonth.getMonth().getDisplayName(TextStyle.FULL, BRAZIL_LOCALE) + "/" + targetMonth.getYear())
+                        .description("Fatura Mensalidade " + dueDate.getMonth().getDisplayName(TextStyle.FULL, BRAZIL_LOCALE) + "/" + dueDate.getYear())
                         .build();
 
                 invoicesByResponsibles.put(enrollment.getStudent().getResponsible().getId(), monthlyInvoice);
@@ -103,7 +103,7 @@ public class GenerateInvoicesForParents {
             InvoiceItem monthlyFeeItem = InvoiceItem.builder()
                     .enrollment(enrollment)
                     .type(Types.MENSALIDADE)
-                    .description("Mensalidade " + targetMonth.getMonth().getDisplayName(TextStyle.FULL, BRAZIL_LOCALE) + "/" + targetMonth.getYear() +
+                    .description("Mensalidade " + dueDate.getMonth().getDisplayName(TextStyle.FULL, BRAZIL_LOCALE) + "/" + dueDate.getYear() +
                             " - Aluno: " + enrollment.getStudent().getName())
                     .amount(enrollment.getMonthlyFee())
                     .build();

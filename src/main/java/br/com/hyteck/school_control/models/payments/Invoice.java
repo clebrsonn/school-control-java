@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.springframework.format.annotation.DateTimeFormat;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -42,6 +43,7 @@ public class Invoice extends AbstractModel {
     private LocalDate issueDate;
 
     @NotNull
+    @DateTimeFormat(pattern = "yyyy-MM")
     @Column(nullable = false)
     private YearMonth referenceMonth;
 
