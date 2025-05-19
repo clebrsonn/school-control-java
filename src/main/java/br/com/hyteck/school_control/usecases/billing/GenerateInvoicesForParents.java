@@ -14,6 +14,7 @@ import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
 import java.util.*;
@@ -81,12 +82,12 @@ public class GenerateInvoicesForParents {
 
             Invoice monthlyInvoice;
             if(!invoicesByResponsibles.containsKey(enrollment.getStudent().getResponsible().getId())){
-                LocalDate dueDate= LocalDate.now().getDayOfMonth() > 10 ?LocalDate.of(targetMonth.getYear(), targetMonth.getMonthValue()+1, 10) : targetMonth.atDay(10);
+                LocalDate dueDate= LocalDate.now(ZoneId.of("America/Sao_Paulo")).getDayOfMonth() > 10 ? LocalDate.of(targetMonth.getYear(), targetMonth.getMonthValue()+1, 10) : targetMonth.atDay(10);
                 monthlyInvoice= Invoice.builder()
                         .responsible(responsible)
                         .referenceMonth(targetMonth)
                         .issueDate(LocalDate.now())
-                        .dueDate(dueDate) // Exemplo: Vencimento todo dia 10 do mês de referência
+                        .dueDate(dueDate)
                         .status(InvoiceStatus.PENDING)
                         .description("Fatura Mensalidade " + targetMonth.getMonth().getDisplayName(TextStyle.FULL, BRAZIL_LOCALE) + "/" + targetMonth.getYear())
                         .build();

@@ -77,7 +77,7 @@ public class GenerateConsolidatedStatementUseCase {
         List<StatementLineItem> items = individualInvoices.stream()
                 .map(invoice -> new StatementLineItem(invoice.getId(),
                         invoice.getItems().getFirst().getEnrollment().getStudent().getName() // Assumindo que os dados estão carregados (cuidado com LAZY loading)
-                        , ("Mensalidade " + invoice.getItems().getFirst().getEnrollment().getClassroom().getName() + " - " + referenceMonth.toString()) // Exemplo
+                        , (invoice.getDescription() + " - " + invoice.getItems().getFirst().getEnrollment().getClassroom().getName() + " - " + referenceMonth.toString()) // Exemplo
                         , (invoice.getAmount())
                         , (invoice.getDueDate())
                 ))

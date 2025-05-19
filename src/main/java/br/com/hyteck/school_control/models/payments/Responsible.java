@@ -29,6 +29,6 @@ public class Responsible extends User {
     @NotBlank
     private String phone;
 
-    @OneToMany(mappedBy = "responsible",  cascade = CascadeType.PERSIST, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "responsible",  cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Student> students;
 }
