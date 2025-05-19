@@ -28,7 +28,7 @@ public record StudentResponse(
                         student.getCpf(),
                         responsible != null ? responsible.getId() : null,
                         responsible != null ? responsible.getName() : null,
-                        student.getEnrollments() != null ?student.getEnrollments().getFirst().getClassroom().getId() : null,
+                        student.getEnrollments() != null && !student.getEnrollments().isEmpty() ?student.getEnrollments().getFirst().getClassroom().getId() : null,
                         student.getCreatedAt(),
                         student.getUpdatedAt()
                 );
