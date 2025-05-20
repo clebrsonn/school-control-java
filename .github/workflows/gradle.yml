@@ -30,7 +30,7 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Build Docker Image
-        run: ./gradlew bootBuildImage --imageName=ghcr.io/${{ github.repository_owner }}/school-control-java:${{ github.sha }}
+        run: ./gradlew bootBuildImage --environment 'SPRING_BOOT_JAVA_OPTS=-Xmx256M -Xss512k -XX:MaxMetaspaceSize=64M -XX:ReservedCodeCacheSize=128M' --imageName=ghcr.io/${{ github.repository_owner }}/school-control-java:${{ github.sha }}
 
       - name: Login no Docker Hub
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
@@ -39,7 +39,7 @@ jobs:
         run: docker push ghcr.io/${{ github.repository_owner }}/school-control-java:${{ github.sha }}
 
       - name: Build Docker Image
-        run: ./gradlew bootBuildImage --imageName=ghcr.io/${{ github.repository_owner }}/school-control-java:latest
+        run: ./gradlew bootBuildImage --environment 'SPRING_BOOT_JAVA_OPTS=-Xmx256M -Xss512k -XX:MaxMetaspaceSize=64M -XX:ReservedCodeCacheSize=128M' --imageName=ghcr.io/${{ github.repository_owner }}/school-control-java:latest
 
       - name: Push da imagem (latest)
         run: docker push ghcr.io/${{ github.repository_owner }}/school-control-java:latest
