@@ -6,13 +6,14 @@ WORKDIR /app
 # Copia somente os arquivos relacionados às dependências
 COPY build.gradle settings.gradle ./
 COPY gradle ./gradle
-RUN chmod +x ./gradlew
 
 # Baixa as dependências (isso será cacheado enquanto os arquivos acima não mudarem)
 RUN ./gradlew dependencies --no-daemon || true
 
 # Copia o restante do projeto (ex: src)
 COPY . .
+
+RUN chmod +x ./gradlew
 
 # Compila a aplicação
 RUN ./gradlew bootJar --no-daemon
