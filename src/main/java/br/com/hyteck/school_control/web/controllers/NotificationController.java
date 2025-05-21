@@ -10,6 +10,7 @@ import br.com.hyteck.school_control.usecases.notification.MarkNotificationAsRead
 import br.com.hyteck.school_control.web.dtos.NotificationResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -28,7 +29,8 @@ import java.util.Map;
 @RestController
 @RequestMapping("/notifications")
 @Tag(name = "Notifications", description = "API para gerenciamento de notificações do usuário")
-@PreAuthorize("isAuthenticated()") // Todas as operações aqui exigem autenticação
+@PreAuthorize("isAuthenticated()")
+@RequiredArgsConstructor
 public class NotificationController {
 
     private static final Logger logger = LoggerFactory.getLogger(NotificationController.class);
@@ -38,15 +40,6 @@ public class NotificationController {
     private final MarkNotificationAsReadUseCase markNotificationAsReadUseCase;
     private final MarkAllUserNotificationsAsReadUseCase markAllUserNotificationsAsReadUseCase;
 
-    public NotificationController(FindNotifications findUserNotificationsUseCase,
-                                  GetUnreadNotificationCountUseCase getUnreadNotificationCountUseCase,
-                                  MarkNotificationAsReadUseCase markNotificationAsReadUseCase,
-                                  MarkAllUserNotificationsAsReadUseCase markAllUserNotificationsAsReadUseCase) {
-        this.findUserNotificationsUseCase = findUserNotificationsUseCase;
-        this.getUnreadNotificationCountUseCase = getUnreadNotificationCountUseCase;
-        this.markNotificationAsReadUseCase = markNotificationAsReadUseCase;
-        this.markAllUserNotificationsAsReadUseCase = markAllUserNotificationsAsReadUseCase;
-    }
 
     private String getAuthenticatedUserId(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated() || !(authentication.getPrincipal() instanceof UserDetails)) {
