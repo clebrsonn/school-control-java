@@ -84,6 +84,13 @@ public interface InvoiceRepository extends JpaRepository<Invoice, String> {
      * @param dueDate  the due date threshold
      * @return a list of invoices matching the criteria
      */
+    @EntityGraph(attributePaths = {
+            "responsible",
+            "items",
+            "items.enrollment",
+            "items.enrollment.student",
+            "items.enrollment.classroom"
+    })
     List<Invoice> findByStatusAndDueDateBefore(InvoiceStatus status, LocalDate dueDate);
 
     /**

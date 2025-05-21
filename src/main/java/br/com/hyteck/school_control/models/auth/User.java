@@ -53,9 +53,6 @@ public class User extends AbstractModel implements UserDetails {
     @Builder.Default
     private boolean enabled = false;
 
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private VerificationToken verificationToken;
-
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return this.roles.stream()

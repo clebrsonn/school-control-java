@@ -23,7 +23,7 @@ import static br.com.hyteck.school_control.models.payments.PaymentMethod.PIX;
 public class Payment extends AbstractModel {
 
     // Um pagamento quita UMA fatura específica
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
+    @OneToOne(optional = false)
     @JoinColumn(name = "invoice_id", nullable = false, unique = true) // FK para Invoice, deve ser única
     @NotNull
     private Invoice invoice;

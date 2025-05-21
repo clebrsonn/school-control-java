@@ -52,12 +52,9 @@ public class JWTProvider {
             if (claims.getPayload().getExpiration().before(new Date())) {
                 return false;
             }
-            
-            if (!"school-control".equals(claims.getPayload().getIssuer())) {
-                return false;
-            }
-            
-            return true;
+            logger.info("validando token");
+
+            return "school-control".equals(claims.getPayload().getIssuer());
         } catch (JwtException | IllegalArgumentException ex) {
             logger.error("Token inválido: " + ex.getMessage());
             return false;

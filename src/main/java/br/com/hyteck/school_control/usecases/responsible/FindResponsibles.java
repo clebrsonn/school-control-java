@@ -2,6 +2,7 @@ package br.com.hyteck.school_control.usecases.responsible;
 
 import br.com.hyteck.school_control.web.dtos.responsible.ResponsibleResponse;
 import br.com.hyteck.school_control.repositories.ResponsibleRepository;
+import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -11,13 +12,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
 @Service
+@AllArgsConstructor
 public class FindResponsibles {
     private static final Logger logger = LoggerFactory.getLogger(FindResponsibles.class);
     private final ResponsibleRepository responsibleRepository;
-
-    public FindResponsibles(ResponsibleRepository responsibleRepository) {
-        this.responsibleRepository = responsibleRepository;
-    }
 
     @Transactional(readOnly = true) // Otimização para operações de leitura
     public Page<ResponsibleResponse> execute(Pageable pageable) {
