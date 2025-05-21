@@ -16,6 +16,10 @@ import org.springframework.validation.annotation.Validated;
 
 import java.util.UUID;
 
+/**
+ * Service responsible for creating a new Responsible entity.
+ * Validates for duplicates, generates credentials, persists the responsible, and triggers verification token creation.
+ */
 @Service
 @Validated
 @Log4j2
@@ -25,14 +29,12 @@ public class CreateResponsible {
     private final ResponsibleRepository responsibleRepository;
     private final CreateVerificationToken createVerification;
 
-
     /**
-     * Executa a lógica de negócio para criar um novo Responsável.
-     * Valida os dados de entrada e verifica duplicidade de email e documento.
+     * Creates a new Responsible and triggers verification token creation.
      *
-     * @param requestDTO O DTO contendo os dados do responsável a ser criado.
-     * @return O DTO representando o responsável criado.
-     * @throws DuplicateResourceException Se o email ou documento já existirem.
+     * @param requestDTO the responsible data to create
+     * @return the created ResponsibleResponse DTO
+     * @throws DuplicateResourceException if the email or document already exists
      */
     @Transactional
     public ResponsibleResponse execute(@Valid ResponsibleRequest requestDTO) {
@@ -58,3 +60,4 @@ public class CreateResponsible {
         return ResponsibleResponse.from(savedResponsible);
     }
 }
+

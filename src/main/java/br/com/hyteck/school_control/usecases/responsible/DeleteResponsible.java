@@ -2,45 +2,53 @@ package br.com.hyteck.school_control.usecases.responsible;
 
 import br.com.hyteck.school_control.exceptions.ResourceNotFoundException;
 import br.com.hyteck.school_control.repositories.ResponsibleRepository;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.validation.annotation.Validated;
 
+/**
+ * Service responsible for deleting a Responsible entity by its unique identifier.
+ * Applies business rules and checks for dependencies before deletion.
+ */
 @Service
+@RequiredArgsConstructor
 public class DeleteResponsible {
 
     private static final Logger logger = LoggerFactory.getLogger(DeleteResponsible.class);
     private final ResponsibleRepository responsibleRepository;
-    // private final StudentRepository studentRepository; // Injete se for verificar dependências
+    // private final StudentRepository studentRepository; // Inject if you need to check dependencies
 
-    public DeleteResponsible(ResponsibleRepository responsibleRepository /*, StudentRepository studentRepository */) {
-        this.responsibleRepository = responsibleRepository;
-        // this.studentRepository = studentRepository;
-    }
-
+    /**
+     * Deletes a Responsible by their unique identifier.
+     *
+     * @param id the unique identifier of the Responsible
+     * @throws ResourceNotFoundException if the Responsible does not exist
+     *                                   // @throws BusinessRuleException if business rules prevent deletion (e.g., associated students)
+     */
     @Transactional
     public void execute(String id) {
-        logger.info("Iniciando exclusão do responsável com ID: {}", id);
+        logger.info("Starting deletion of Responsible with ID: {}", id);
 
-        // 1. Verificar se o responsável existe antes de tentar deletar
+        // 1. Check if the Responsible exists before attempting deletion
         if (!responsibleRepository.existsById(id)) {
-            logger.warn("Responsável não encontrado para exclusão. ID: {}", id);
-            throw new ResourceNotFoundException("Responsável não encontrado com ID: " + id);
+            logger.warn("Responsible not found for deletion. ID: {}", id);
+            throw new ResourceNotFoundException("Responsible not found with ID: " + id);
         }
 
-        // 2. (Opcional mas MUITO recomendado) Verificar dependências
-        // Ex: Não permitir excluir se houver estudantes associados
+        // 2. (Optional but HIGHLY recommended) Check dependencies
+        // Example: Do not allow deletion if there are associated students
         /*
         if (studentRepository.existsByResponsibleId(id)) {
-             logger.warn("Tentativa de excluir responsável ID {} que possui estudantes associados.", id);
-             throw new BusinessRuleException("Não é possível excluir responsável com estudantes associados."); // Criar BusinessRuleException
+             logger.warn("Attempt to delete Responsible ID {} with associated students.", id);
+             throw new BusinessRuleException("Cannot delete Responsible with associated students."); // Create BusinessRuleException
         }
         */
 
-        // 3. Deletar o responsável
+        // 3. Delete the Responsible
         responsibleRepository.deleteById(id);
-        logger.info("Responsável excluído com sucesso. ID: {}", id);
+        logger.info("Responsible successfully deleted. ID: {}", id);
     }
 }
+

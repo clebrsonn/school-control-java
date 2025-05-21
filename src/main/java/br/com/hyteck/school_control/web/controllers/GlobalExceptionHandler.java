@@ -199,7 +199,7 @@ public class GlobalExceptionHandler {
         ApiErrorResponse errorResponse = new ApiErrorResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(),
-                "Ocorreu um erro inesperado no servidor. Tente novamente mais tarde.",
+                ex.getMessage() != null? ex.getMessage() : "Ocorreu um erro inesperado no servidor. Tente novamente mais tarde.",
                 request.getRequestURI()
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);

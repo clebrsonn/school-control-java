@@ -17,6 +17,10 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.stream.Stream;
 
+/**
+ * Service responsible for storing, loading, and deleting files in the local file system.
+ * Implements the StorageService interface for file operations using Spring's Resource abstraction.
+ */
 @Service
 @Qualifier("file-system")
 public class FileStorageService implements StorageService {
@@ -24,7 +28,9 @@ public class FileStorageService implements StorageService {
     private final Path rootLocation = Paths.get("uploads");
 
     /**
+     * Initializes the storage directory structure.
      *
+     * @throws StorageException if the storage directory cannot be created
      */
     @Override
     public void init() {
@@ -38,8 +44,11 @@ public class FileStorageService implements StorageService {
     }
 
     /**
-     * @param file
-     * @return
+     * Stores a file in the storage location.
+     *
+     * @param file the file to store
+     * @return the stored file name
+     * @throws StorageException if the file is empty, outside the allowed directory, or cannot be stored
      */
     @Override
     public String store(MultipartFile file) {
@@ -69,7 +78,10 @@ public class FileStorageService implements StorageService {
     }
 
     /**
-     * @return
+     * Loads all file paths from the storage location.
+     *
+     * @return a stream of relative file paths
+     * @throws StorageException if the files cannot be read
      */
     @Override
     public Stream<Path> loadAll() {
@@ -83,8 +95,10 @@ public class FileStorageService implements StorageService {
     }
 
     /**
-     * @param filename
-     * @return
+     * Loads a specific file path from the storage location.
+     *
+     * @param filename the name of the file to load
+     * @return the resolved file path
      */
     @Override
     public Path load(String filename) {
@@ -92,8 +106,11 @@ public class FileStorageService implements StorageService {
     }
 
     /**
-     * @param filename
-     * @return
+     * Loads a file as a Spring Resource for download or streaming.
+     *
+     * @param filename the name of the file to load
+     * @return the file as a Resource
+     * @throws StorageException if the file cannot be read or does not exist
      */
     @Override
     public Resource loadAsResource(String filename) {
@@ -115,7 +132,7 @@ public class FileStorageService implements StorageService {
     }
 
     /**
-     *
+     * Deletes all files and directories in the storage location.
      */
     @Override
     public void deleteAll() {

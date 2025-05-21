@@ -1,5 +1,6 @@
 package br.com.hyteck.school_control.usecases.student;
 
+import br.com.hyteck.school_control.exceptions.DuplicateResourceException;
 import br.com.hyteck.school_control.exceptions.ResourceNotFoundException;
 import br.com.hyteck.school_control.models.classrooms.Student;
 import br.com.hyteck.school_control.models.payments.Responsible;
@@ -10,31 +11,39 @@ import br.com.hyteck.school_control.web.dtos.classroom.EnrollmentRequest;
 import br.com.hyteck.school_control.web.dtos.student.StudentRequest;
 import br.com.hyteck.school_control.web.dtos.student.StudentResponse;
 import jakarta.validation.Valid;
+import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
+/**
+ * Service responsible for creating a new student entity.
+ * Validates for duplicates, associates the responsible, persists the student, and creates the enrollment.
+ */
 @Service
 @Validated
+@AllArgsConstructor
 public class CreateStudent {
 
     private static final Logger logger = LoggerFactory.getLogger(CreateStudent.class);
     private final StudentRepository studentRepository;
     private final ResponsibleRepository responsibleRepository;
-
     private final CreateEnrollment createEnrollment;
 
-    public CreateStudent(StudentRepository studentRepository, ResponsibleRepository responsibleRepository, CreateEnrollment createEnrollment) {
-        this.studentRepository = studentRepository;
-        this.responsibleRepository = responsibleRepository;
-        this.createEnrollment = createEnrollment;
-    }
 
+    /**
+     * Creates a new student and associates it with a responsible and enrollment.
+     *
+     * @param requestDTO the student data to create
+     * @return the created student response DTO
+     * @throws ResourceNotFoundException if the responsible is not found
+     * @throws DuplicateResourceException if the CPF or email already exists (if validation is enabled)
+     */
     @Transactional // Asegura que la operación sea atómica
     public StudentResponse execute(@Valid StudentRequest requestDTO) {
-        logger.info("Iniciando creación de estudiante: {}", requestDTO.name());
+        logger.info("Starting student creation: {}", requestDTO.name());
 
         // 1. Verificar duplicados (CPF y Email son buenos candidatos)
 //        if (studentRepository.existsByCpf(requestDTO.cpf())) {

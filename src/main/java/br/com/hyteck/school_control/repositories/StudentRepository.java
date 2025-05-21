@@ -9,4 +9,7 @@ import java.util.List;
 
 public interface StudentRepository extends JpaRepository<Student, String> {
     Page<Student> findByResponsibleId(String responsibleId, Pageable pageable);
+    java.util.Optional<Student> findByCpf(String cpf);
+    java.util.Optional<Student> findByEmail(String email);
 }
+

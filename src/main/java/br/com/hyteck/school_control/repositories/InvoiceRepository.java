@@ -18,15 +18,21 @@ import java.util.List;
 @Repository
 public interface InvoiceRepository extends JpaRepository<Invoice, String> {
 
-    // Usar @EntityGraph para definir o plano de fetch
+    /**
+     * Retrieves all pending invoices for a given responsible and reference month, including all necessary relationships to avoid N+1 queries.
+     *
+     * @param responsibleId   the ID of the responsible party
+     * @param referenceMonth  the reference month (YearMonth)
+     * @param statuses        the collection of invoice statuses to filter (e.g., PENDING, OVERDUE)
+     * @return a list of invoices matching the criteria, with related entities eagerly fetched
+     */
     @EntityGraph(attributePaths = {
-            "responsible",                 // Para buscar o responsável da Invoice (usado no GenerateConsolidatedStatementUseCase)
-            "items",                       // Para buscar a coleção de InvoiceItems
-            "items.enrollment",            // Para buscar o Enrollment de cada InvoiceItem
-            "items.enrollment.student",    // Para buscar o Student de cada Enrollment
-            "items.enrollment.classroom"   // Para buscar a Classroom de cada Enrollment
+            "responsible",
+            "items",
+            "items.enrollment",
+            "items.enrollment.student",
+            "items.enrollment.classroom"
     })
-    // A query JPQL agora foca apenas nas condições de filtro
     @Query("SELECT inv FROM Invoice inv " +
             "WHERE inv.responsible.id = :responsibleId " +
             "AND inv.referenceMonth = :referenceMonth " +
@@ -37,15 +43,20 @@ public interface InvoiceRepository extends JpaRepository<Invoice, String> {
             @Param("statuses") Collection<InvoiceStatus> statuses
     );
 
-    // Usar @EntityGraph para definir o plano de fetch
+    /**
+     * Retrieves all pending invoices for a given reference month, including all necessary relationships to avoid N+1 queries.
+     *
+     * @param referenceMonth  the reference month (YearMonth)
+     * @param statuses        the collection of invoice statuses to filter (e.g., PENDING, OVERDUE)
+     * @return a list of invoices matching the criteria, with related entities eagerly fetched
+     */
     @EntityGraph(attributePaths = {
-            "responsible",                 // Para buscar o responsável da Invoice (usado no GenerateConsolidatedStatementUseCase)
-            "items",                       // Para buscar a coleção de InvoiceItems
-            "items.enrollment",            // Para buscar o Enrollment de cada InvoiceItem
-            "items.enrollment.student",    // Para buscar o Student de cada Enrollment
-            "items.enrollment.classroom"   // Para buscar a Classroom de cada Enrollment
+            "responsible",
+            "items",
+            "items.enrollment",
+            "items.enrollment.student",
+            "items.enrollment.classroom"
     })
-    // A query JPQL agora foca apenas nas condições de filtro
     @Query("SELECT inv FROM Invoice inv " +
             "WHERE inv.referenceMonth = :referenceMonth " +
             "AND inv.status IN :statuses")
@@ -54,13 +65,36 @@ public interface InvoiceRepository extends JpaRepository<Invoice, String> {
             @Param("statuses") Collection<InvoiceStatus> statuses
     );
 
+    /**
+     * Sums the total amount of invoices for a given month and statuses.
+     *
+     * @param referenceMonth  the reference month (YearMonth)
+     * @param statuses        the collection of invoice statuses to filter (e.g., PENDING, OVERDUE)
+     * @return the total sum of invoice amounts
+     */
     @Query("SELECT COALESCE(SUM(inv.amount), 0) FROM Invoice inv WHERE inv.referenceMonth = :referenceMonth AND inv.status IN :statuses")
     BigDecimal sumAmountByReferenceMonthAndStatuses(
             @Param("referenceMonth") YearMonth referenceMonth,
             @Param("statuses") Collection<InvoiceStatus> statuses);
 
+    /**
+     * Finds all invoices by status and due date before a given date.
+     *
+     * @param status   the invoice status
+     * @param dueDate  the due date threshold
+     * @return a list of invoices matching the criteria
+     */
     List<Invoice> findByStatusAndDueDateBefore(InvoiceStatus status, LocalDate dueDate);
 
+    /**
+     * Checks if an invoice exists for a responsible, month, enrollment, and type.
+     *
+     * @param responsibleId   the ID of the responsible party
+     * @param referenceMonth  the reference month (YearMonth)
+     * @param enrollmentId    the enrollment ID
+     * @param type            the type of invoice item
+     * @return true if such an invoice exists, false otherwise
+     */
     @Query("SELECT CASE WHEN COUNT(inv) > 0 THEN TRUE ELSE FALSE END " +
             "FROM Invoice inv JOIN inv.items item " +
             "WHERE inv.responsible.id = :responsibleId " +
@@ -75,5 +109,11 @@ public interface InvoiceRepository extends JpaRepository<Invoice, String> {
             @Param("type") Types type
     );
 
+    /**
+     * Counts the number of invoices by status.
+     *
+     * @param status the invoice status
+     * @return the count of invoices with the given status
+     */
     long countByStatus(InvoiceStatus status);
 }

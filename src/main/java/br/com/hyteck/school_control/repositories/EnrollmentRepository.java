@@ -7,10 +7,12 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface EnrollmentRepository extends JpaRepository<Enrollment, String> { // Assume ID String
     List<Enrollment> findByStudentId(String studentId);
+    List<Enrollment> findByStudentIdAndStatus(String studentId, Enrollment.Status status);
     /**
      * Verifica se já existe uma matrícula para um estudante específico em uma turma específica.
      *
@@ -37,6 +39,16 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, String> 
      * @return true se já existe matrícula naquele ano, false caso contrário.
      */
     boolean existsByStudentIdAndClassroomYear(String studentId, String year);
+
+    /**
+     * (Opcional) Verifica se um estudante já está matriculado em alguma turma no mesmo ano.
+     *
+     * @param studentId ID do estudante.
+     * @param year      Ano letivo.
+     * @return true se já existe matrícula naquele ano, false caso contrário.
+     */
+    Optional<Enrollment> findByStudentIdAndClassroomYearAndStatus(String studentId, String year, Enrollment.Status status);
+
 
     /**
      * Busca todas as matrículas associadas a uma turma específica, com paginação.

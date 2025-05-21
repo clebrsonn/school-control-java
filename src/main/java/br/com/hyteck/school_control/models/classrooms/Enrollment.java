@@ -1,5 +1,6 @@
 package br.com.hyteck.school_control.models.classrooms;
 
+import br.com.hyteck.school_control.exceptions.BusinessException;
 import br.com.hyteck.school_control.exceptions.DuplicateResourceException;
 import br.com.hyteck.school_control.models.AbstractModel;
 import br.com.hyteck.school_control.models.payments.InvoiceItem;
@@ -12,6 +13,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Entity
 @Table(name = "enrollments")
@@ -64,14 +66,14 @@ public class Enrollment extends AbstractModel {
                             classroom.getName() + " (" + classroom.getYear() + ")'."
             );
         }
-
+        var enrollment= enrollmentRepository.findByStudentIdAndClassroomYearAndStatus(student.getId(), classroom.getYear(), Status.ACTIVE);
         // b) (Opcional) Verificar se o estudante já está matriculado em ALGUMA turma NESTE ano
-        if (enrollmentRepository.existsByStudentIdAndClassroomYear(student.getId(), classroom.getYear())) {
-            throw new RuntimeException(
-                    "Estudante '" + student.getName() + "' já possui matrícula em outra turma para o ano " + classroom.getYear() + "."
-            );
-        }
+        enrollment.ifPresent(value -> {
+            value.setStatus(Status.CANCELLED);
+            value.setEndDate(LocalDateTime.now());
+            enrollmentRepository.save(value);
 
+        });
         // c) (Opcional) Verificar limite de vagas na turma?
         // int maxCapacity = 30; // Exemplo, poderia vir da turma ou configuração
         // int currentEnrollments = enrollmentRepository.countByClassroomId(classRoom.getId()); // Método a criar

@@ -16,8 +16,12 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
 import java.time.LocalDate;
-import java.util.Objects; // Importar Objects para comparação segura
+import java.util.Objects;
 
+/**
+ * Service responsible for updating a student entity.
+ * Validates duplicates, updates the responsible, and persists changes.
+ */
 @Service
 @Validated
 public class UpdateStudent {
@@ -31,9 +35,18 @@ public class UpdateStudent {
         this.responsibleRepository = responsibleRepository;
     }
 
+    /**
+     * Updates a student with the provided data.
+     *
+     * @param id         the student ID
+     * @param requestDTO the student data to update
+     * @return the updated student response DTO
+     * @throws ResourceNotFoundException if the student or responsible is not found
+     * @throws DuplicateResourceException if the CPF or email is already used by another student
+     */
     @Transactional
     public StudentResponse execute(String id, @Valid StudentRequest requestDTO) {
-        logger.info("Iniciando atualização do estudante com ID: {}", id);
+        logger.info("Starting update for student with ID: {}", id);
 
         // 1. Buscar estudante existente ou lançar exceção
         Student existingStudent = studentRepository.findById(id)
@@ -63,7 +76,8 @@ public class UpdateStudent {
     }
 
     /**
-     * Verifica se o novo CPF ou Email já existem para OUTRO estudante.
+     * Validates if the current date is within the allowed enrollment period.
+     * Throws IllegalStateException if not.
      */
     private void validateEnrollmentPeriod() {
         LocalDate now = LocalDate.now();
@@ -73,6 +87,13 @@ public class UpdateStudent {
         }
     }
 
+    /**
+     * Checks for duplicate CPF or email for another student.
+     * Throws DuplicateResourceException if a duplicate is found.
+     *
+     * @param requestDTO      the student request data
+     * @param existingStudent the current student entity
+     */
     private void checkDuplicates(StudentRequest requestDTO, Student existingStudent) {
         // Verifica CPF apenas se foi alterado
 //        if (!Objects.equals(requestDTO.cpf(), existingStudent.getCpf())) {

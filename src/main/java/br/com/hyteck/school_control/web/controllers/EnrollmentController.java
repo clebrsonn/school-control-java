@@ -5,6 +5,7 @@ import br.com.hyteck.school_control.usecases.enrollment.FindEnrollmentsByStudent
 import br.com.hyteck.school_control.web.dtos.classroom.EnrollmentRequest;
 import br.com.hyteck.school_control.web.dtos.classroom.EnrollmentResponse;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -14,16 +15,12 @@ import java.net.URI;
 import java.util.List;
 
 @RestController
-@RequestMapping("/enrollments") // Endpoint base para matrículas
+@RequestMapping("/enrollments")
+@RequiredArgsConstructor
 public class EnrollmentController {
 
     private final CreateEnrollment createEnrollmentUseCase;
     private final FindEnrollmentsByStudentId findEnrollmentsByStudentId;
-
-    public EnrollmentController(CreateEnrollment createEnrollmentUseCase, FindEnrollmentsByStudentId findEnrollmentsByStudentId) {
-        this.createEnrollmentUseCase = createEnrollmentUseCase;
-        this.findEnrollmentsByStudentId = findEnrollmentsByStudentId;
-    }
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")

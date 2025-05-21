@@ -6,6 +6,12 @@ import br.com.hyteck.school_control.usecases.billing.CountInvoicesByStatus;
 import br.com.hyteck.school_control.usecases.billing.GenerateConsolidatedStatementUseCase;
 import br.com.hyteck.school_control.usecases.billing.GenerateInvoicesForParents;
 import br.com.hyteck.school_control.web.dtos.billing.ConsolidatedStatement;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -19,17 +25,21 @@ import java.time.YearMonth;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * REST controller for billing and invoice operations.
+ * Provides endpoints for consolidated statements, invoice generation, and financial summaries.
+ */
 @Slf4j
 @AllArgsConstructor
 @RestController
 @RequestMapping("/billing")
+@Tag(name = "Billing", description = "Endpoints for billing and invoice management")
 public class BillingController {
 
     private final GenerateConsolidatedStatementUseCase generateStatementUseCase;
     private final GenerateInvoicesForParents generateInvoicesForParents;
     private final CountInvoicesByStatus countInvoicesByStatus;
     private final InvoiceCalculationService invoiceCalculationService;
-
 
     @GetMapping("/responsibles/{responsibleId}/statements/{yearMonth}")
     public ResponseEntity<ConsolidatedStatement> getConsolidatedStatementForResponsible(
@@ -38,11 +48,11 @@ public class BillingController {
 
         Optional<ConsolidatedStatement> statementOpt = generateStatementUseCase.execute(responsibleId, yearMonth);
 
-        // Retorna 200 OK com o extrato se encontrado, ou 404 Not Found se não houver faturas ou responsável
         return statementOpt
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
+
     @GetMapping("/statements/{yearMonth}")
     public ResponseEntity<List<ConsolidatedStatement>> getConsolidatedStatement(
             @PathVariable @DateTimeFormat(pattern = "yyyy-MM") YearMonth yearMonth) { // Recebe ano-mês
@@ -57,20 +67,39 @@ public class BillingController {
     @PreAuthorize("hasRole('ADMIN')") // Apenas administradores podem disparar
     public ResponseEntity<Void> triggerGenerateMonthlyInvoices(
             @PathVariable @DateTimeFormat(pattern = "yyyy-MM") YearMonth yearMonth) {
-            generateInvoicesForParents.execute(yearMonth);
-            return ResponseEntity.status(HttpStatus.ACCEPTED).build(); // 202 Accepted - processo iniciado
+        generateInvoicesForParents.execute(yearMonth);
+        return ResponseEntity.status(HttpStatus.ACCEPTED).build(); // 202 Accepted - processo iniciado
     }
 
     @GetMapping("/invoices/{status}/count")
-    @PreAuthorize("hasRole('ADMIN')") // Apenas administradores podem disparar
-    public ResponseEntity<Long> countInvoicesByStatus(@PathVariable InvoiceStatus status){
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Long> countInvoicesByStatus(@PathVariable InvoiceStatus status) {
         return ResponseEntity.ok(countInvoicesByStatus.execute(status));
     }
 
+    /**
+     * Returns the total amount to be received for all open invoices (PENDING and OVERDUE) in the given month.
+     *
+     * @param referenceMonth the reference month in yyyy-MM format
+     * @return the total amount to be received
+     */
+    @Operation(
+            summary = "Get total amount to be received in a month",
+            description = "Returns the sum of all open invoices (PENDING and OVERDUE) for the specified month.",
+            parameters = {
+                    @Parameter(name = "referenceMonth", description = "Reference month in yyyy-MM format", example = "2025-05")
+            },
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Total amount to be received",
+                            content = @Content(schema = @Schema(implementation = BigDecimal.class))),
+                    @ApiResponse(responseCode = "400", description = "Invalid month format", content = @Content)
+            }
+    )
     @GetMapping("/total-month/{referenceMonth}")
-    public BigDecimal getTotalToReceive(
+    public ResponseEntity<BigDecimal> getTotalToReceive(
             @PathVariable("referenceMonth") @DateTimeFormat(pattern = "yyyy-MM") YearMonth referenceMonth) {
-        return invoiceCalculationService.calcularTotalAReceberNoMes(referenceMonth);
+        BigDecimal total = invoiceCalculationService.calcularTotalAReceberNoMes(referenceMonth);
+        return ResponseEntity.ok(total);
     }
 
 

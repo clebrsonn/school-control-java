@@ -4,6 +4,7 @@ import br.com.hyteck.school_control.usecases.student.*;
 import br.com.hyteck.school_control.web.dtos.student.StudentRequest;
 import br.com.hyteck.school_control.web.dtos.student.StudentResponse;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -19,6 +20,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/students")
 @PreAuthorize("isAuthenticated()")
+@RequiredArgsConstructor
 public class StudentController {
 
     private final CreateStudent createStudentUseCase;
@@ -27,13 +29,6 @@ public class StudentController {
     private final UpdateStudent updateStudentUseCase;
     private final DeleteStudent deleteStudentUseCase;
 
-    public StudentController(CreateStudent createStudentUseCase, FindStudentById findStudentByIdUseCase, FindStudents findAllStudentsUseCase, UpdateStudent updateStudentUseCase, DeleteStudent deleteStudentUseCase) {
-        this.createStudentUseCase = createStudentUseCase;
-        this.findStudentByIdUseCase = findStudentByIdUseCase;
-        this.findAllStudentsUseCase = findAllStudentsUseCase;
-        this.updateStudentUseCase = updateStudentUseCase;
-        this.deleteStudentUseCase = deleteStudentUseCase;
-    }
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
