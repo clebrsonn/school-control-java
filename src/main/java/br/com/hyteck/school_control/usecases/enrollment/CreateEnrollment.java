@@ -109,7 +109,7 @@ public class CreateEnrollment {
                 .build();
 
         feeInvoice.addItem(feeItem);
-        feeInvoice.setAmount(feeInvoice.calculateTotalAmount());
+        feeInvoice.setOriginalAmount(feeInvoice.calculateOriginalAmount());
 
         invoiceRepository.save(feeInvoice); // Salva a fatura (e o item por cascata)
         log.info("Fatura da taxa de matrícula ID {} criada para enrollment {}", feeInvoice.getId(), enrollment.getId());

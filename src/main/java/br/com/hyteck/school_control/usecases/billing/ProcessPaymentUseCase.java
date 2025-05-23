@@ -1,5 +1,6 @@
 package br.com.hyteck.school_control.usecases.billing;
 
+import br.com.hyteck.school_control.events.PaymentProcessedEvent;
 import br.com.hyteck.school_control.exceptions.BusinessException;
 import br.com.hyteck.school_control.exceptions.ResourceNotFoundException;
 import br.com.hyteck.school_control.models.financial.Account;
@@ -10,7 +11,6 @@ import br.com.hyteck.school_control.repositories.InvoiceRepository;
 import br.com.hyteck.school_control.repositories.PaymentRepository;
 import br.com.hyteck.school_control.repositories.financial.LedgerEntryRepository;
 import br.com.hyteck.school_control.services.financial.AccountService;
-import br.com.hyteck.school_control.events.PaymentProcessedEvent;
 import br.com.hyteck.school_control.services.financial.LedgerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,9 +19,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.UUID; // Added for UUID conversion
 
 @Service
 @RequiredArgsConstructor
@@ -51,7 +51,7 @@ public class ProcessPaymentUseCase {
         }
         
         Responsible responsible = invoice.getResponsible();
-        if (responsible == null || responsible.getUser() == null || responsible.getUser().getId() == null) {
+        if (responsible == null || responsible.getId() == null) {
             log.error("Invoice ID: {} does not have an associated responsible party or responsible user with ID.", invoiceId);
             throw new BusinessException("Invoice responsible party or user details not found. Cannot process payment or publish event.");
         }
@@ -118,12 +118,12 @@ public class ProcessPaymentUseCase {
         try {
             PaymentProcessedEvent event = new PaymentProcessedEvent(
                     this,
-                    UUID.fromString(finalPayment.getId()),
-                    UUID.fromString(invoice.getId()),
+                    finalPayment.getId(),
+                    invoice.getId(),
                     finalPayment.getAmountPaid(),
                     finalPayment.getStatus(),
                     invoice.getStatus(),
-                    UUID.fromString(responsible.getUser().getId())
+                    responsible.getId()
             );
             eventPublisher.publishEvent(event);
             log.info("Published PaymentProcessedEvent for Payment ID: {}", finalPayment.getId());

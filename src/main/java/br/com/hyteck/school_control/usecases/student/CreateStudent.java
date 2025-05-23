@@ -33,19 +33,6 @@ public class CreateStudent {
     private final CreateEnrollment createEnrollment;
 
     /**
-     * Constructs a new CreateStudent service.
-     *
-     * @param studentRepository     The repository for student data access.
-     * @param responsibleRepository The repository for responsible data access.
-     * @param createEnrollment      The use case for creating enrollments.
-     */
-    public CreateStudent(StudentRepository studentRepository, ResponsibleRepository responsibleRepository, CreateEnrollment createEnrollment) {
-        this.studentRepository = studentRepository;
-        this.responsibleRepository = responsibleRepository;
-        this.createEnrollment = createEnrollment;
-    }
-
-    /**
      * Creates a new student, associates them with a responsible party, and enrolls them in a class.
      * It first validates if a responsible exists by ID or phone number.
      * Then, it builds and saves the new student. Finally, it creates an enrollment for the student.

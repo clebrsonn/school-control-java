@@ -51,8 +51,7 @@ public record ConsolidatedStatement(
      * @param paymentLink      An optional URL or link that directs the user to a payment gateway for this statement.
      * @param barcode          An optional barcode string, typically for generating a printable bill (boleto in Brazil).
      */
-    public ConsolidatedStatement { // Compact constructor
-        // Ensure deep immutability for the list of items.
-        this.items = (items == null) ? List.of() : List.copyOf(items);
+    public ConsolidatedStatement {
+        items = (items == null) ? List.of() : List.copyOf(items);
     }
 }

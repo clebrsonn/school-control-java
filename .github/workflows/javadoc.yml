@@ -1,6 +1,9 @@
 name: Publish Javadoc to GitHub Pages
 
 on:
+  pull_request:
+    branches:
+      - main
   push:
     branches:
       - main # Or your default branch

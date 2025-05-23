@@ -62,7 +62,7 @@ public class UpdateInvoiceStatusUseCase {
         }
         
         Responsible responsible = invoice.getResponsible();
-        if (responsible == null || responsible.getUser() == null || responsible.getUser().getId() == null) {
+        if (responsible == null || responsible.getId() == null) {
             log.error("Invoice ID: {} has no associated responsible party or responsible user with ID. Cannot update status or publish event.", invoiceId);
             throw new ResourceNotFoundException("Responsible party or user details not found for Invoice ID: " + invoiceId);
         }
@@ -114,7 +114,7 @@ public class UpdateInvoiceStatusUseCase {
                         UUID.fromString(invoice.getId()),
                         oldStatus,
                         newStatus,
-                        UUID.fromString(responsible.getUser().getId())
+                        UUID.fromString(responsible.getId())
                 );
                 eventPublisher.publishEvent(event);
                 log.info("Published InvoiceStatusChangedEvent for Invoice ID {}: {} -> {}", invoice.getId(), oldStatus, newStatus);

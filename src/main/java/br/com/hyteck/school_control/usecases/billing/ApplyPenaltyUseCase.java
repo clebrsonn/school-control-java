@@ -1,5 +1,6 @@
 package br.com.hyteck.school_control.usecases.billing;
 
+import br.com.hyteck.school_control.events.PenaltyAssessedEvent;
 import br.com.hyteck.school_control.exceptions.BusinessException;
 import br.com.hyteck.school_control.exceptions.ResourceNotFoundException;
 import br.com.hyteck.school_control.models.financial.Account;
@@ -10,7 +11,6 @@ import br.com.hyteck.school_control.models.payments.InvoiceStatus;
 import br.com.hyteck.school_control.models.payments.Responsible;
 import br.com.hyteck.school_control.repositories.InvoiceRepository;
 import br.com.hyteck.school_control.services.financial.AccountService;
-import br.com.hyteck.school_control.events.PenaltyAssessedEvent;
 import br.com.hyteck.school_control.services.financial.LedgerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,7 +22,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.UUID; // Added for UUID conversion
+import java.util.UUID;
 
 /**
  * Use case responsible for applying penalties to overdue invoices.
@@ -85,7 +85,7 @@ public class ApplyPenaltyUseCase {
 
 
         Responsible responsible = invoice.getResponsible();
-        if (responsible == null || responsible.getUser() == null || responsible.getUser().getId() == null) {
+        if (responsible == null || responsible.getId() == null) {
             log.error("Invoice ID: {} has no associated responsible party or user ID. Cannot apply penalty or publish event.", invoiceId);
             throw new BusinessException("Invoice responsible or user details not found. Cannot apply penalty.");
         }
@@ -124,7 +124,7 @@ public class ApplyPenaltyUseCase {
                     this,
                     UUID.fromString(invoice.getId()),
                     PENALTY_AMOUNT, // Use the actual penalty amount applied
-                    UUID.fromString(responsible.getUser().getId())
+                    UUID.fromString(responsible.getId())
             );
             eventPublisher.publishEvent(event);
             log.info("Published PenaltyAssessedEvent for Invoice ID {}", invoice.getId());

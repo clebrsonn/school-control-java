@@ -13,7 +13,6 @@ import java.util.Optional;
  */
 @Repository
 public interface UserRepository extends JpaRepository<User, String> {
-    Optional<User> findByUsername(String username);
 
     /**
      * Checks if a user exists with the given email address.

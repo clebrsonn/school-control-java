@@ -57,7 +57,7 @@ public class PaymentNotificationListener {
                         "Seu pagamento de %s referente à fatura %s foi processado com sucesso. Status da fatura: %s.",
                         formattedAmount,
                         forItemDescription,
-                        event.getUpdatedInvoiceStatus().getFriendlyName() // Assuming InvoiceStatus has a getFriendlyName() or similar
+                        event.getUpdatedInvoiceStatus().name() // Assuming InvoiceStatus has a getFriendlyName() or similar
                 );
                 notificationType = "PAYMENT_SUCCESS";
                 break;

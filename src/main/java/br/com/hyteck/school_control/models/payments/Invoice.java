@@ -14,6 +14,7 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -50,8 +51,9 @@ public class Invoice extends AbstractModel {
      */
     @NotNull(message = "Original amount cannot be null.")
     @Positive(message = "Original amount must be positive if items exist, or zero otherwise.")
-    @Column(name = "original_amount", nullable = false, precision = 19, scale = 4) // Increased precision for consistency
-    private BigDecimal originalAmount;
+    @Column(name = "original_amount", nullable = false, precision = 19, scale = 4,  columnDefinition="numeric(19,4) default 0")
+    @Builder.Default
+    private BigDecimal originalAmount= BigDecimal.ZERO;
 
     /**
      * The date by which the invoice payment is due.

@@ -2,27 +2,18 @@ package br.com.hyteck.school_control.usecases.billing;
 
 import br.com.hyteck.school_control.models.classrooms.Enrollment;
 import br.com.hyteck.school_control.models.payments.*;
-import br.com.hyteck.school_control.models.financial.Account;
-import br.com.hyteck.school_control.models.financial.AccountType;
-import br.com.hyteck.school_control.models.financial.LedgerEntryType;
 import br.com.hyteck.school_control.repositories.DiscountRepository;
 import br.com.hyteck.school_control.repositories.EnrollmentRepository;
 import br.com.hyteck.school_control.repositories.InvoiceRepository;
-import br.com.hyteck.school_control.services.financial.AccountService;
-import br.com.hyteck.school_control.events.BatchInvoiceGeneratedEvent;
-import br.com.hyteck.school_control.services.financial.LedgerService;
-// import br.com.hyteck.school_control.usecases.notification.CreateNotification; // To be removed
+import br.com.hyteck.school_control.usecases.notification.CreateNotification;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationEventPublisher; // Added
+import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.text.NumberFormat;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -37,6 +28,7 @@ import java.util.*;
  */
 @Service
 @Log4j2
+@RequiredArgsConstructor
 public class GenerateInvoicesForParents {
     private final DiscountRepository discountRepository;
     private final EnrollmentRepository enrollmentRepository;
@@ -48,23 +40,6 @@ public class GenerateInvoicesForParents {
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy", BRAZIL_LOCALE);
     private static final NumberFormat CURRENCY_FORMATTER = NumberFormat.getCurrencyInstance(BRAZIL_LOCALE);
 
-    /**
-     * Constructs a new GenerateInvoicesForParents use case.
-     *
-     * @param enrollmentRepository Repository for accessing enrollment data.
-     * @param invoiceRepository    Repository for saving invoice data.
-     * @param createNotification   Use case for creating notifications.
-     * @param discountRepository   Repository for accessing discount data.
-     */
-    public GenerateInvoicesForParents(EnrollmentRepository enrollmentRepository,
-                                      InvoiceRepository invoiceRepository,
-                                      CreateNotification createNotification,
-                                      DiscountRepository discountRepository) {
-        this.enrollmentRepository = enrollmentRepository;
-        this.invoiceRepository = invoiceRepository;
-        this.createNotification = createNotification;
-        this.discountRepository = discountRepository;
-    }
 
     /**
      * Executes the monthly invoice generation process for the specified target month.
@@ -143,7 +118,7 @@ public class GenerateInvoicesForParents {
 
             // Apply discount if this is the second (or more) student for the same responsible on this invoice
             // and a discount is available.
-            if (monthlyInvoice.getItems().size() > 0) { // Indicates more than one student for this responsible
+            if (!monthlyInvoice.getItems().isEmpty()) { // Indicates more than one student for this responsible
                 monthlyFeeDiscount.ifPresent(discount -> {
                     // Ensure discount is not already added
                     if (monthlyInvoice.getDiscounts().stream().noneMatch(d -> d.getId().equals(discount.getId()))) {
@@ -178,12 +153,12 @@ public class GenerateInvoicesForParents {
             savedInvoices.forEach(invoice -> {
                 Responsible responsible = invoice.getResponsible();
                 // Ensure the responsible has an associated user account for notifications.
-                if (responsible.getUser() == null || responsible.getUser().getId() == null) {
+                if (responsible.getId() == null) {
                     log.warn("Responsible ID {} (Name: {}) has no associated user account. Cannot send notification for invoice ID {}.",
                             responsible.getId(), responsible.getName(), invoice.getId());
                     return;
                 }
-                String userIdForNotification = responsible.getUser().getId();
+                String userIdForNotification = responsible.getId();
 
                 // It's better to list student names if multiple, or use a generic message.
                 String studentNames = invoice.getItems().stream()
@@ -192,7 +167,7 @@ public class GenerateInvoicesForParents {
                         .reduce((s1, s2) -> s1 + ", " + s2)
                         .orElse("N/D");
 
-                String formattedAmount = CURRENCY_FORMATTER.format(invoice.getAmount()); // Amount is calculated by PrePersist/PreUpdate
+                String formattedAmount = CURRENCY_FORMATTER.format(invoice.getOriginalAmount()); // Amount is calculated by PrePersist/PreUpdate
                 String formattedDueDate = invoice.getDueDate().format(DATE_FORMATTER);
 
                 String notificationMessage = String.format(
