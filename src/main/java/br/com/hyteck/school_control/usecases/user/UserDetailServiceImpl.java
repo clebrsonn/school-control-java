@@ -1,6 +1,7 @@
 package br.com.hyteck.school_control.usecases.user;
 
 import br.com.hyteck.school_control.repositories.UserRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -12,18 +13,11 @@ import org.springframework.stereotype.Service;
  * by Spring Security to handle user authentication and authorization.
  */
 @Service
+@RequiredArgsConstructor
 public class UserDetailServiceImpl implements UserDetailsService {
 
     private final UserRepository userRepository;
 
-    /**
-     * Constructs a new UserDetailServiceImpl.
-     *
-     * @param userRepository The repository for accessing user data.
-     */
-    public UserDetailServiceImpl(UserRepository userRepository) {
-        this.userRepository = userRepository;
-    }
 
     /**
      * Loads a user by their username from the {@link UserRepository}.

@@ -3,6 +3,7 @@ package br.com.hyteck.school_control.repositories;
 import br.com.hyteck.school_control.models.classrooms.Enrollment;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -12,6 +13,12 @@ import java.util.Optional;
 @Repository
 public interface EnrollmentRepository extends JpaRepository<Enrollment, String> { // Assume ID String
     List<Enrollment> findByStudentId(String studentId);
+
+    @EntityGraph(attributePaths = {
+            "classroom",
+            "student",
+            "invoiceItems"
+    })
     List<Enrollment> findByStudentIdAndStatus(String studentId, Enrollment.Status status);
     /**
      * Verifica se já existe uma matrícula para um estudante específico em uma turma específica.
@@ -57,7 +64,17 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, String> 
      * @param pageable    Informações de paginação e ordenação.
      * @return Uma página de Enrollments para a turma especificada.
      */
+    @EntityGraph(attributePaths = {
+            "classroom",
+            "student",
+            "invoiceItems"
+    })
     Page<Enrollment> findByClassroomId(String classroomId, Pageable pageable);
 
+    @EntityGraph(attributePaths = {
+            "classroom",
+            "student",
+            "invoiceItems"
+    })
     List<Enrollment> findByStatus(Enrollment.Status status);
 }

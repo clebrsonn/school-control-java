@@ -100,14 +100,6 @@ public class User extends AbstractModel implements UserDetails {
     private boolean enabled = false;
 
     /**
-     * The verification token associated with this user, used for processes like email verification.
-     * This is a one-to-one relationship, and operations on User may cascade to VerificationToken.
-     * `orphanRemoval = true` means the VerificationToken is deleted if it's removed from this relationship.
-     */
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private VerificationToken verificationToken;
-
-    /**
      * Returns the authorities granted to the user.
      * This implementation maps the user's {@link Role} objects to a collection of {@link SimpleGrantedAuthority}.
      *

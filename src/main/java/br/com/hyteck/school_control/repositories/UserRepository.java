@@ -2,6 +2,7 @@ package br.com.hyteck.school_control.repositories;
 
 import br.com.hyteck.school_control.models.auth.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -12,12 +13,6 @@ import java.util.Optional;
  */
 @Repository
 public interface UserRepository extends JpaRepository<User, String> {
-    /**
-     * Finds a user by their username.
-     *
-     * @param username The username to search for.
-     * @return An {@link Optional} containing the {@link User} if found, or an empty Optional if not.
-     */
     Optional<User> findByUsername(String username);
 
     /**
@@ -27,5 +22,16 @@ public interface UserRepository extends JpaRepository<User, String> {
      * @return {@code true} if a user with the specified email exists, {@code false} otherwise.
      */
     boolean existsByEmail(String email);
+
+    /**
+     * Finds a user by their username.
+     *
+     * @param username The username to search for.
+     * @return An {@link Optional} containing the {@link User} if found, or an empty Optional if not.
+     */
+
+    @Query("SELECT u FROM User u JOIN FETCH u.roles WHERE u.username = :username")
+    Optional<User> findByUsername(String username);
+
 
 }

@@ -97,15 +97,9 @@ public class JWTProvider {
                 logger.warn("Token has expired: {}", token);
                 return false;
             }
-            
-            // Check if the issuer is correct.
-            if (!"school-control".equals(claims.getPayload().getIssuer())) {
-                logger.warn("Token issuer is invalid. Expected 'school-control', got: {}", claims.getPayload().getIssuer());
-                return false;
-            }
-            
-            // If all checks pass, the token is considered valid.
-            return true;
+            logger.info("validando token");
+
+            return "school-control".equals(claims.getPayload().getIssuer());
         } catch (JwtException | IllegalArgumentException ex) {
             // Log common JWT validation errors.
             logger.error("Invalid JWT token: {}", ex.getMessage());

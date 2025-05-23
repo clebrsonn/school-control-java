@@ -6,22 +6,19 @@ import br.com.hyteck.school_control.models.auth.User;
 import br.com.hyteck.school_control.models.auth.VerificationToken;
 import br.com.hyteck.school_control.repositories.UserRepository;
 import br.com.hyteck.school_control.repositories.VerificationTokenRepository;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 public class VerifyAccount {
 
     private static final Logger logger = LoggerFactory.getLogger(VerifyAccount.class);
     private final VerificationTokenRepository tokenRepository;
     private final UserRepository userRepository;
-
-    public VerifyAccount(VerificationTokenRepository tokenRepository, UserRepository userRepository) {
-        this.tokenRepository = tokenRepository;
-        this.userRepository = userRepository;
-    }
 
     @Transactional
     public void execute(String tokenValue) {

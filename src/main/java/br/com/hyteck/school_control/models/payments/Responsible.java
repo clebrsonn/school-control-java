@@ -31,4 +31,12 @@ public class Responsible extends User {
 
     @OneToMany(mappedBy = "responsible",  cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Student> students;
+
+    public Responsible(String id, String name, String email, String phone) {
+        this.setId(id);
+        super.setEmail(email);
+        this.name = name;
+
+        this.phone = phone;
+    }
 }
