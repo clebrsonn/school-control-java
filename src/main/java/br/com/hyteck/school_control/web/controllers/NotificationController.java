@@ -75,7 +75,7 @@ public class NotificationController {
     /**
      * Get unread notifications count for the current user
      *
-     * @returns Number of unread notifications
+     * @return Number of unread notifications
      */
     @GetMapping("/unread/count")
     @Operation(summary = "Contar notificações não lidas",
