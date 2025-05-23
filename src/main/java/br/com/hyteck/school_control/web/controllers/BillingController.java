@@ -41,39 +41,72 @@ public class BillingController {
     private final CountInvoicesByStatus countInvoicesByStatus;
     private final InvoiceCalculationService invoiceCalculationService;
 
+    /**
+     * Retrieves the consolidated financial statement for a specific responsible person for a given month.
+     *
+     * @param responsibleId The ID of the responsible person.
+     * @param yearMonth     The year and month for which to generate the statement (format: yyyy-MM).
+     * @return A {@link ResponseEntity} containing the {@link ConsolidatedStatement} if found, or 404 Not Found.
+     */
     @GetMapping("/responsibles/{responsibleId}/statements/{yearMonth}")
     public ResponseEntity<ConsolidatedStatement> getConsolidatedStatementForResponsible(
             @PathVariable String responsibleId,
-            @PathVariable @DateTimeFormat(pattern = "yyyy-MM") YearMonth yearMonth) { // Recebe ano-mês
+            @PathVariable @DateTimeFormat(pattern = "yyyy-MM") YearMonth yearMonth) {
 
+        // Delegate to the use case to generate the statement.
         Optional<ConsolidatedStatement> statementOpt = generateStatementUseCase.execute(responsibleId, yearMonth);
 
+        // Return the statement if present, otherwise return 404 Not Found.
         return statementOpt
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    /**
+     * Retrieves a list of consolidated financial statements for all responsible persons for a given month.
+     *
+     * @param yearMonth The year and month for which to generate the statements (format: yyyy-MM).
+     * @return A {@link ResponseEntity} containing a list of {@link ConsolidatedStatement}.
+     */
     @GetMapping("/statements/{yearMonth}")
     public ResponseEntity<List<ConsolidatedStatement>> getConsolidatedStatement(
-            @PathVariable @DateTimeFormat(pattern = "yyyy-MM") YearMonth yearMonth) { // Recebe ano-mês
+            @PathVariable @DateTimeFormat(pattern = "yyyy-MM") YearMonth yearMonth) {
 
+        // Delegate to the use case to generate statements for the specified month.
         List<ConsolidatedStatement> statements = generateStatementUseCase.execute(yearMonth);
 
-        // Retorna 200 OK com o extrato se encontrado, ou 404 Not Found se não houver faturas ou responsável
+        // Return 200 OK with the list of statements.
         return ResponseEntity.ok(statements);
     }
 
+    /**
+     * Triggers the generation of monthly invoices for all applicable parents/responsibles for a given month.
+     * This endpoint is restricted to users with the 'ADMIN' role.
+     *
+     * @param yearMonth The year and month for which to generate invoices (format: yyyy-MM).
+     * @return A {@link ResponseEntity} with status 202 Accepted, indicating the process has been initiated.
+     */
     @PostMapping("/generate-monthly-invoices/{yearMonth}")
-    @PreAuthorize("hasRole('ADMIN')") // Apenas administradores podem disparar
+    @PreAuthorize("hasRole('ADMIN')") // Only administrators can trigger this.
     public ResponseEntity<Void> triggerGenerateMonthlyInvoices(
             @PathVariable @DateTimeFormat(pattern = "yyyy-MM") YearMonth yearMonth) {
+        // Execute the use case to generate invoices.
         generateInvoicesForParents.execute(yearMonth);
-        return ResponseEntity.status(HttpStatus.ACCEPTED).build(); // 202 Accepted - processo iniciado
+        // Return 202 Accepted, as this is likely an asynchronous process.
+        return ResponseEntity.status(HttpStatus.ACCEPTED).build();
     }
 
+    /**
+     * Counts the number of invoices by their status (e.g., PENDING, PAID, OVERDUE).
+     * This endpoint is restricted to users with the 'ADMIN' role.
+     *
+     * @param status The {@link InvoiceStatus} to filter by.
+     * @return A {@link ResponseEntity} containing the count of invoices with the specified status.
+     */
     @GetMapping("/invoices/{status}/count")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Long> countInvoicesByStatus(@PathVariable InvoiceStatus status) {
+        // Delegate to the use case to count invoices by status.
         return ResponseEntity.ok(countInvoicesByStatus.execute(status));
     }
 

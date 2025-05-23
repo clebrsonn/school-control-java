@@ -3,6 +3,8 @@ package br.com.hyteck.school_control.repositories;
 import br.com.hyteck.school_control.models.payments.Invoice;
 import br.com.hyteck.school_control.models.payments.InvoiceStatus;
 import br.com.hyteck.school_control.models.payments.Types;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -72,7 +74,7 @@ public interface InvoiceRepository extends JpaRepository<Invoice, String> {
      * @param statuses        the collection of invoice statuses to filter (e.g., PENDING, OVERDUE)
      * @return the total sum of invoice amounts
      */
-    @Query("SELECT COALESCE(SUM(inv.amount), 0) FROM Invoice inv WHERE inv.referenceMonth = :referenceMonth AND inv.status IN :statuses")
+    @Query("SELECT COALESCE(SUM(inv.originalAmount), 0) FROM Invoice inv WHERE inv.referenceMonth = :referenceMonth AND inv.status IN :statuses")
     BigDecimal sumAmountByReferenceMonthAndStatuses(
             @Param("referenceMonth") YearMonth referenceMonth,
             @Param("statuses") Collection<InvoiceStatus> statuses);
@@ -123,4 +125,6 @@ public interface InvoiceRepository extends JpaRepository<Invoice, String> {
      * @return the count of invoices with the given status
      */
     long countByStatus(InvoiceStatus status);
+
+    Page<Invoice> findByStatusInAndDueDateBefore(Collection<InvoiceStatus> invoiceStatuses, LocalDate localDate, Pageable pageable);
 }

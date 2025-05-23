@@ -4,5 +4,5 @@ public enum InvoiceStatus {
     PENDING, // Pendente
     PAID,    // Paga
     OVERDUE, // Vencida
-    CANCELED // Cancelada
+    CANCELLED // Cancelada
 }
