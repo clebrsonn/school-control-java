@@ -62,7 +62,7 @@ class PenaltyNotificationListenerTest {
         testInvoice = Invoice.builder()
                 .id(invoiceId.toString())
                 .responsible(resp)
-                .originalAmount(new BigDecimal("100.00"))
+                .amount(new BigDecimal("100.00"))
                 .referenceMonth(YearMonth.now())
                 .items(items)
                 .build();

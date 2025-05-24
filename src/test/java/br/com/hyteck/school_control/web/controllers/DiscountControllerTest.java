@@ -16,6 +16,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -42,15 +43,15 @@ class DiscountControllerTest {
     @Autowired
     private WebApplicationContext webApplicationContext;
 
-    @MockBean
+    @MockitoBean
     private CreateDiscountUseCase createDiscountUseCase;
-    @MockBean
+    @MockitoBean
     private UpdateDiscountUseCase updateDiscountUseCase;
-    @MockBean
+    @MockitoBean
     private DeleteDiscountUseCase deleteDiscountUseCase;
-    @MockBean
+    @MockitoBean
     private FindDiscounts findDiscountsUseCase;
-    @MockBean
+    @MockitoBean
     private FindDiscountById findDiscountByIdUseCase;
 
     @Autowired

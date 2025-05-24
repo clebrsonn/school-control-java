@@ -26,7 +26,6 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
-@ToString(callSuper = true)
 public class Account extends AbstractModel {
 
     /**

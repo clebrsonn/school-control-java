@@ -74,7 +74,7 @@ class GenerateInvoicesForParentsTest {
         targetMonth = YearMonth.of(2023, 10);
         LocalDateTime fixedDateTime = LocalDateTime.of(2023, 10, 5, 10, 0, 0); // Fixed point in time for tests
 
-        responsible1 = Responsible.builder().id("resp1").name("Responsible One").user(br.com.hyteck.school_control.models.auth.User.builder().id("user1").build()).build();
+        responsible1 = Responsible.builder().id("resp1").name("Responsible One").build();
         student1 = Student.builder().id("stud1").name("Student One").responsible(responsible1).build();
         enrollment1 = Enrollment.builder()
                 .id("enroll1")
@@ -125,7 +125,7 @@ class GenerateInvoicesForParentsTest {
         
         Invoice expectedInvoice = commonInvoiceSetup(responsible1, targetMonth);
         expectedInvoice.addItem(InvoiceItem.builder().enrollment(enrollment1).type(Types.MENSALIDADE).description("Mensalidade").amount(enrollment1.getMonthlyFee()).build());
-        expectedInvoice.updateOriginalAmount(); // originalAmount will be 300.00
+        expectedInvoice.updateAmount(); // amount will be 300.00
         expectedInvoice.setId("invGenId1"); // Simulate save setting an ID
 
         when(invoiceRepository.save(any(Invoice.class))).thenReturn(expectedInvoice);
@@ -145,7 +145,7 @@ class GenerateInvoicesForParentsTest {
         
         ArgumentCaptor<Invoice> invoiceCaptor = ArgumentCaptor.forClass(Invoice.class);
         verify(invoiceRepository).save(invoiceCaptor.capture());
-        assertEquals(new BigDecimal("300.00"), invoiceCaptor.getValue().getOriginalAmount());
+        assertEquals(new BigDecimal("300.00"), invoiceCaptor.getValue().getAmount());
 
         verify(ledgerService).postTransaction(
                 eq(expectedInvoice), eq(null), eq(arAccountResp1), eq(tuitionRevenueAccount),
@@ -168,17 +168,17 @@ class GenerateInvoicesForParentsTest {
                 .thenReturn(false); // None are pre-billed
 
         Invoice expectedInvoice = commonInvoiceSetup(responsible1, targetMonth);
-        // Items will be added inside computeIfAbsent and loop, then originalAmount calculated
+        // Items will be added inside computeIfAbsent and loop, then amount calculated
         expectedInvoice.setId("invGenId2");
 
         when(invoiceRepository.save(any(Invoice.class))).thenAnswer(invocation -> {
             Invoice inv = invocation.getArgument(0);
             inv.setId(expectedInvoice.getId()); // Ensure ID is set for notification link
-            // Manually add items as the use case would, to correctly calculate originalAmount for the captor
+            // Manually add items as the use case would, to correctly calculate amount for the captor
             if(inv.getItems().isEmpty()){ // prevent adding twice if test setup is complex
                 inv.addItem(InvoiceItem.builder().enrollment(enrollment1).type(Types.MENSALIDADE).description("").amount(enrollment1.getMonthlyFee()).build());
                 inv.addItem(InvoiceItem.builder().enrollment(enrollment2).type(Types.MENSALIDADE).description("").amount(enrollment2.getMonthlyFee()).build());
-                inv.updateOriginalAmount();
+                inv.updateAmount();
             }
             return inv;
         });
@@ -199,7 +199,7 @@ class GenerateInvoicesForParentsTest {
         ArgumentCaptor<Invoice> invoiceCaptor = ArgumentCaptor.forClass(Invoice.class);
         verify(invoiceRepository).save(invoiceCaptor.capture());
         Invoice savedInvoice = invoiceCaptor.getValue();
-        assertEquals(new BigDecimal("550.00"), savedInvoice.getOriginalAmount()); // 300 + 250
+        assertEquals(new BigDecimal("550.00"), savedInvoice.getAmount()); // 300 + 250
 
         // Verify tuition fee posting for total original amount
         verify(ledgerService).postTransaction(

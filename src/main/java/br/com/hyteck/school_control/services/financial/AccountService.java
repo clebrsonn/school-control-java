@@ -1,5 +1,6 @@
 package br.com.hyteck.school_control.services.financial;
 
+import br.com.hyteck.school_control.exceptions.ResourceNotFoundException;
 import br.com.hyteck.school_control.models.financial.Account;
 import br.com.hyteck.school_control.models.financial.AccountType;
 import br.com.hyteck.school_control.models.payments.Responsible;
@@ -104,12 +105,12 @@ public class AccountService {
      *
      * @param accountId The ID of the account for which to calculate the balance.
      * @return The calculated balance as a {@link BigDecimal}.
-     * @throws br.com.hyteck.school_control.exceptions.ResourceNotFoundException if the account with the given ID is not found.
+     * @throws ResourceNotFoundException if the account with the given ID is not found.
      */
     @Transactional(readOnly = true)
     public BigDecimal getAccountBalance(@NotNull final String accountId) {
         final Account account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new br.com.hyteck.school_control.exceptions.ResourceNotFoundException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         "Account not found with ID: " + accountId + " for balance calculation."
                 ));
 
@@ -141,7 +142,7 @@ public class AccountService {
     @Transactional
     public void updateAccountBalance(@NotNull final String accountId) {
         final Account account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new br.com.hyteck.school_control.exceptions.ResourceNotFoundException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         "Account not found with ID: " + accountId + " for balance update."
                 ));
         

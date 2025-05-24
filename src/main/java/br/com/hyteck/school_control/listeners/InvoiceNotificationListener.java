@@ -65,12 +65,12 @@ public class InvoiceNotificationListener {
                 .collect(Collectors.joining(", "));
 
         // The amount for notification should be the net amount due.
-        // The invoice originalAmount is set, and ledger entries for discounts are made.
+        // The invoice amount is set, and ledger entries for discounts are made.
         // For simplicity, the event could carry the net amount, or we approximate it here.
         // The previous GenerateInvoicesForParents calculated this net amount before notification.
         // Let's assume the notification is about the *original* invoice amount before payment.
         // A more accurate "balance due" would require querying the ledger.
-        final String formattedAmount = FormatUtils.CURRENCY_FORMATTER.format(representativeInvoice.getOriginalAmount());
+        final String formattedAmount = FormatUtils.CURRENCY_FORMATTER.format(representativeInvoice.getAmount());
         final String formattedDueDate = representativeInvoice.getDueDate().format(FormatUtils.DATE_FORMATTER);
         final String targetMonthFormatted = event.getTargetMonth().format(DateTimeFormatter.ofPattern("MM/yyyy")); // Keep specific month format here
 

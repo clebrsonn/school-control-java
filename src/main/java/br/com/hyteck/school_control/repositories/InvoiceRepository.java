@@ -74,7 +74,7 @@ public interface InvoiceRepository extends JpaRepository<Invoice, String> {
      * @param statuses        the collection of invoice statuses to filter (e.g., PENDING, OVERDUE)
      * @return the total sum of invoice amounts
      */
-    @Query("SELECT COALESCE(SUM(inv.originalAmount), 0) FROM Invoice inv WHERE inv.referenceMonth = :referenceMonth AND inv.status IN :statuses")
+    @Query("SELECT COALESCE(SUM(inv.amount), 0) FROM Invoice inv WHERE inv.referenceMonth = :referenceMonth AND inv.status IN :statuses")
     BigDecimal sumAmountByReferenceMonthAndStatuses(
             @Param("referenceMonth") YearMonth referenceMonth,
             @Param("statuses") Collection<InvoiceStatus> statuses);

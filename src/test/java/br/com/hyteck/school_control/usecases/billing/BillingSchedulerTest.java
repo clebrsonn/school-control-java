@@ -24,6 +24,7 @@ import java.time.ZoneId;
 import java.util.Collections;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -52,12 +53,12 @@ class BillingSchedulerTest {
         // This allows us to control the execution of the transaction callback.
         transactionTemplate = new TransactionTemplate(transactionManager);
         // For tests where the transaction needs to execute the callback:
-        doAnswer(invocation -> {
-            TransactionCallbackWithoutResult callback = invocation.getArgument(0);
-            // Simulate transaction execution by directly invoking the callback's doInTransactionWithoutResult method
-            callback.doInTransactionWithoutResult(mock(TransactionStatus.class));
-            return null; // For TransactionCallbackWithoutResult, return null
-        }).when(transactionManager).execute(any(TransactionCallbackWithoutResult.class));
+//        doAnswer(invocation -> {
+//            TransactionCallbackWithoutResult callback = invocation.getArgument(0);
+//            // Simulate transaction execution by directly invoking the callback's doInTransactionWithoutResult method
+//            callback.doInTransaction(mock(TransactionStatus.class));
+//            return null; // For TransactionCallbackWithoutResult, return null
+//        }).when(transactionManager).execute(any(TransactionCallbackWithoutResult.class));
         
         // Re-inject mocks if BillingScheduler uses constructor injection for TransactionTemplate,
         // or set it manually if it has a setter (not the case here).

@@ -60,15 +60,15 @@ class InvoiceNotificationListenerTest {
         Responsible resp = Responsible.builder().id(responsibleId.toString()).name("Responsible Test").build();
         Student stud = Student.builder().id("studTest1").name("Student Test").build();
         Enrollment enr = Enrollment.builder().id("enrTest1").student(stud).build();
-        InvoiceItem item = InvoiceItem.builder().id("itemTest1").enrollment(enr).amount(new BigDecimal("250.00")).build();
-        
+        InvoiceItem item = InvoiceItem.builder().enrollment(enr).amount(new BigDecimal("250.00")).build();
+        item.setId("itemTest1");
         List<InvoiceItem> items = new ArrayList<>();
         items.add(item);
 
         representativeInvoice = Invoice.builder()
                 .id(invoiceId1.toString())
                 .responsible(resp)
-                .originalAmount(new BigDecimal("250.00"))
+                .amount(new BigDecimal("250.00"))
                 .dueDate(LocalDate.now().plusMonths(1))
                 .referenceMonth(targetMonth)
                 .items(items) // Make sure items are initialized

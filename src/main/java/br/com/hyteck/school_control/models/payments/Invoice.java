@@ -15,7 +15,6 @@ import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 
 /**
  * Represents a financial invoice in the system.
@@ -51,9 +50,9 @@ public class Invoice extends AbstractModel {
      */
     @NotNull(message = "Original amount cannot be null.")
     @Positive(message = "Original amount must be positive if items exist, or zero otherwise.")
-    @Column(name = "original_amount", nullable = false, precision = 19, scale = 4,  columnDefinition="numeric(19,4) default 0")
+    @Column(nullable = false, precision = 19, scale = 4)
     @Builder.Default
-    private BigDecimal originalAmount= BigDecimal.ZERO;
+    private BigDecimal amount = BigDecimal.ZERO;
 
     /**
      * The date by which the invoice payment is due.
@@ -98,32 +97,6 @@ public class Invoice extends AbstractModel {
     private String description;
 
     /**
-     * List of discounts applied to this invoice.
-     */
-    /**
-     * @deprecated Discounts are now applied as ledger entries. This field may be removed in future versions.
-     *             The financial impact of discounts is recorded in the {@link br.com.hyteck.school_control.models.financial.LedgerEntry} table.
-     */
-    @Deprecated(since = "2.0.0", forRemoval = true)
-    @ManyToMany
-    @JoinTable(
-            name = "invoice_discounts",
-            joinColumns = @JoinColumn(name = "invoice_id"),
-            inverseJoinColumns = @JoinColumn(name = "discount_id")
-    )
-    @Builder.Default
-    private List<Discount> discounts = new ArrayList<>();
-
-    /**
-     * @deprecated Penalties are now applied as ledger entries. This field may be removed in future versions.
-     *             The financial impact of penalties is recorded in the {@link br.com.hyteck.school_control.models.financial.LedgerEntry} table.
-     */
-    @Deprecated(since = "2.0.0", forRemoval = true)
-    @Column(name = "penalty", precision = 10, scale = 2)
-    @Builder.Default
-    private BigDecimal penalty = BigDecimal.ZERO;
-
-    /**
      * The responsible party to whom this invoice is issued.
      */
     @ManyToOne
@@ -146,7 +119,7 @@ public class Invoice extends AbstractModel {
      * This ensures the {@code amount} field is always up-to-date.
      */
     // @PrePersist and @PreUpdate calculateTotal() method removed.
-    // The originalAmount should be set explicitly when items are added/modified.
+    // The amount should be set explicitly when items are added/modified.
 
     /**
      * Calculates the sum of amounts from all {@link InvoiceItem}s associated with this invoice.
@@ -155,7 +128,7 @@ public class Invoice extends AbstractModel {
      *
      * @return The sum of all item amounts, or {@link BigDecimal#ZERO} if no items exist.
      */
-    public BigDecimal calculateOriginalAmount() {
+    public BigDecimal calculateAmount() {
         // Start with the sum of all individual item amounts.
         return items.stream()
                 .map(InvoiceItem::getAmount)
@@ -164,11 +137,11 @@ public class Invoice extends AbstractModel {
     }
 
     /**
-     * Updates the {@code originalAmount} field by recalculating it from the current list of items.
+     * Updates the {@code amount} field by recalculating it from the current list of items.
      * This method should be called whenever invoice items are added, removed, or their amounts change,
      * before the invoice is persisted or if the original amount needs to be re-evaluated.
      */
-    public void updateOriginalAmount() {
-        this.originalAmount = calculateOriginalAmount();
+    public void updateAmount() {
+        this.amount = calculateAmount();
     }
 }

@@ -61,7 +61,7 @@ public class GenerateOverduePaymentsReportUseCase {
                             responsibleName,
                             studentName,
                             className,
-                            invoice.getOriginalAmount(),
+                            invoice.getAmount(),
                             invoice.getDueDate()
                     );
                 })

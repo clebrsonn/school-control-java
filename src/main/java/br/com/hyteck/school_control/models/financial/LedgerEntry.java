@@ -36,7 +36,6 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
-@ToString(callSuper = true)
 // Hibernate-specific check constraint. For portability, a JPA Bean Validation custom constraint or service-layer validation is better.
 // This constraint ensures that either debitAmount or creditAmount is greater than zero, but not both simultaneously being greater than zero,
 // and also not both being zero (or less, though @DecimalMin handles positive).

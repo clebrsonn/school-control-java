@@ -54,14 +54,15 @@ class InvoiceStatusChangeNotificationListenerTest {
         Responsible resp = Responsible.builder().id("respId").name("Responsible Test").build();
         Student stud = Student.builder().id("studTest").name("Student Test").build();
         Enrollment enr = Enrollment.builder().id("enrTest").student(stud).build();
-        InvoiceItem item = InvoiceItem.builder().id("itemTest").enrollment(enr).amount(new BigDecimal("150.00")).build();
+        InvoiceItem item = InvoiceItem.builder().enrollment(enr).amount(new BigDecimal("150.00")).build();
+        item.setId("itemTest");
         List<InvoiceItem> items = new ArrayList<>();
         items.add(item);
 
         testInvoice = Invoice.builder()
                 .id(invoiceId.toString())
                 .responsible(resp)
-                .originalAmount(new BigDecimal("150.00"))
+                .amount(new BigDecimal("150.00"))
                 .dueDate(LocalDate.now().plusDays(1))
                 .referenceMonth(YearMonth.now())
                 .items(items)

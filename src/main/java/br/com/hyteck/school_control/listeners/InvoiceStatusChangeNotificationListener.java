@@ -64,7 +64,7 @@ public class InvoiceStatusChangeNotificationListener {
             message = String.format(
                     "Atenção: O status da sua %s foi atualizado para VENCIDA. Valor: %s, Vencimento: %s. Por favor, regularize.",
                     invoiceIdentifier,
-                    FormatUtils.CURRENCY_FORMATTER.format(invoice.getOriginalAmount()), // Or current balance if available
+                    FormatUtils.CURRENCY_FORMATTER.format(invoice.getAmount()), // Or current balance if available
                     invoice.getDueDate().format(FormatUtils.DATE_FORMATTER)
             );
             notificationType = "INVOICE_OVERDUE";
@@ -81,7 +81,7 @@ public class InvoiceStatusChangeNotificationListener {
              message = String.format(
                     "Atenção: O status da sua %s mudou de PAGA para PENDENTE. Valor: %s, Vencimento: %s. Verifique seus pagamentos ou entre em contato.",
                     invoiceIdentifier,
-                    FormatUtils.CURRENCY_FORMATTER.format(invoice.getOriginalAmount()), // Or current balance
+                    FormatUtils.CURRENCY_FORMATTER.format(invoice.getAmount()), // Or current balance
                     invoice.getDueDate().format(FormatUtils.DATE_FORMATTER)
             );
             notificationType = "INVOICE_PAYMENT_REVERSED"; // Example type

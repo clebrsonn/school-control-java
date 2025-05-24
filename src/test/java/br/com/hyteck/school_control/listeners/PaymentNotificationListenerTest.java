@@ -36,23 +36,23 @@ class PaymentNotificationListenerTest {
     @InjectMocks
     private PaymentNotificationListener paymentNotificationListener;
 
-    private UUID responsibleUserId;
-    private UUID paymentId;
-    private UUID invoiceId;
+    private String responsibleUserId;
+    private String paymentId;
+    private String invoiceId;
     private BigDecimal amountPaid;
 
     @BeforeEach
     void setUp() {
-        responsibleUserId = UUID.randomUUID();
-        paymentId = UUID.randomUUID();
-        invoiceId = UUID.randomUUID();
+        responsibleUserId = UUID.randomUUID().toString();
+        paymentId = UUID.randomUUID().toString();
+        invoiceId = UUID.randomUUID().toString();
         amountPaid = new BigDecimal("100.50");
 
         Invoice mockInvoice = Invoice.builder()
-                                .id(invoiceId.toString())
+                                .id(invoiceId)
                                 .responsible(Responsible.builder().name("Responsible Test").build())
                                 .build();
-        when(invoiceRepository.findById(invoiceId.toString())).thenReturn(Optional.of(mockInvoice));
+        when(invoiceRepository.findById(invoiceId)).thenReturn(Optional.of(mockInvoice));
         doNothing().when(createNotificationUseCase).execute(anyString(), anyString(), anyString(), anyString());
     }
 
@@ -68,9 +68,9 @@ class PaymentNotificationListenerTest {
         // Assert
         ArgumentCaptor<String> messageCaptor = ArgumentCaptor.forClass(String.class);
         verify(createNotificationUseCase).execute(
-                eq(responsibleUserId.toString()),
+                eq(responsibleUserId),
                 messageCaptor.capture(),
-                eq("/invoices/" + invoiceId.toString()),
+                eq("/invoices/" + invoiceId),
                 eq("PAYMENT_SUCCESS")
         );
         assertTrue(messageCaptor.getValue().contains("processado com sucesso"));
@@ -89,9 +89,9 @@ class PaymentNotificationListenerTest {
         // Assert
         ArgumentCaptor<String> messageCaptor = ArgumentCaptor.forClass(String.class);
         verify(createNotificationUseCase).execute(
-                eq(responsibleUserId.toString()),
+                eq(responsibleUserId),
                 messageCaptor.capture(),
-                eq("/invoices/" + invoiceId.toString()),
+                eq("/invoices/" + invoiceId),
                 eq("PAYMENT_FAILURE")
         );
         assertTrue(messageCaptor.getValue().contains("falha ao processar seu pagamento"));
@@ -109,9 +109,9 @@ class PaymentNotificationListenerTest {
         // Assert
         ArgumentCaptor<String> messageCaptor = ArgumentCaptor.forClass(String.class);
         verify(createNotificationUseCase).execute(
-                eq(responsibleUserId.toString()),
+                eq(responsibleUserId),
                 messageCaptor.capture(),
-                eq("/invoices/" + invoiceId.toString()),
+                eq("/invoices/" + invoiceId),
                 eq("PAYMENT_PENDING")
         );
         assertTrue(messageCaptor.getValue().contains("pendente de confirmação"));
@@ -145,7 +145,7 @@ class PaymentNotificationListenerTest {
 
     @Test
     void handlePaymentProcessed_ShouldUseGenericDescription_WhenInvoiceNotFound() {
-        when(invoiceRepository.findById(invoiceId.toString())).thenReturn(Optional.empty());
+        when(invoiceRepository.findById(invoiceId)).thenReturn(Optional.empty());
         PaymentProcessedEvent event = new PaymentProcessedEvent(this, paymentId, invoiceId, amountPaid,
                 PaymentStatus.COMPLETED, InvoiceStatus.PAID, responsibleUserId);
         
@@ -153,7 +153,7 @@ class PaymentNotificationListenerTest {
         
         ArgumentCaptor<String> messageCaptor = ArgumentCaptor.forClass(String.class);
         verify(createNotificationUseCase).execute(anyString(), messageCaptor.capture(), anyString(), anyString());
-        assertTrue(messageCaptor.getValue().contains("(Fatura ID: " + invoiceId.toString().substring(0,8)));
+        assertTrue(messageCaptor.getValue().contains("(Fatura ID: " + invoiceId.substring(0,8)));
     }
 
 }

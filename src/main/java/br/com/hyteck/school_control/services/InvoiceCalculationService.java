@@ -27,7 +27,7 @@ public class InvoiceCalculationService {
     public BigDecimal calcularTotalAReceberNoMes(YearMonth referenceMonth) {
         return invoiceRepository.sumAmountByReferenceMonthAndStatuses(
                 referenceMonth,
-                Arrays.asList(InvoiceStatus.PENDING, InvoiceStatus.OVERDUE)
+                Arrays.asList(InvoiceStatus.PENDING, InvoiceStatus.OVERDUE, InvoiceStatus.PAID)
         );
     }
 }

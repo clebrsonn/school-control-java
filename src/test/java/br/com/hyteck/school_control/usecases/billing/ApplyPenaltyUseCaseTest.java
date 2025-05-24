@@ -64,8 +64,7 @@ class ApplyPenaltyUseCaseTest {
 
     @BeforeEach
     void setUp() {
-        User responsibleUser = User.builder().id("userRespTest1").username("respUserTest").build();
-        responsible = Responsible.builder().id(responsibleId).name("Test Resp").user(responsibleUser).build();
+        responsible = Responsible.builder().id(responsibleId).name("Test Resp").username("respUserTest").build();
         arAccount = Account.builder().id("arAcc").type(AccountType.ASSET).responsible(responsible).name("A/R - Test Resp").build();
         penaltyRevenueAccount = Account.builder().id("penaltyAcc").type(AccountType.REVENUE).name("Penalty Revenue").build();
 
@@ -74,7 +73,7 @@ class ApplyPenaltyUseCaseTest {
                 .responsible(responsible)
                 .status(InvoiceStatus.OVERDUE)
                 .dueDate(LocalDate.now(ZoneId.of("America/Sao_Paulo")).minusDays(1))
-                .originalAmount(new BigDecimal("100"))
+                .amount(new BigDecimal("100"))
                 .build();
 
         pendingInvoicePastDue = Invoice.builder()
@@ -82,7 +81,7 @@ class ApplyPenaltyUseCaseTest {
                 .responsible(responsible)
                 .status(InvoiceStatus.PENDING)
                 .dueDate(LocalDate.now(ZoneId.of("America/Sao_Paulo")).minusDays(1))
-                .originalAmount(new BigDecimal("200"))
+                .amount(new BigDecimal("200"))
                 .build();
         
         pendingInvoiceNotDue = Invoice.builder()
@@ -90,7 +89,7 @@ class ApplyPenaltyUseCaseTest {
                 .responsible(responsible)
                 .status(InvoiceStatus.PENDING)
                 .dueDate(LocalDate.now(ZoneId.of("America/Sao_Paulo")).plusDays(5))
-                .originalAmount(new BigDecimal("300"))
+                .amount(new BigDecimal("300"))
                 .build();
 
         paidInvoice = Invoice.builder()
@@ -98,7 +97,7 @@ class ApplyPenaltyUseCaseTest {
                 .responsible(responsible)
                 .status(InvoiceStatus.PAID)
                 .dueDate(LocalDate.now(ZoneId.of("America/Sao_Paulo")).minusDays(10))
-                .originalAmount(new BigDecimal("100"))
+                .amount(new BigDecimal("100"))
                 .build();
     }
 
@@ -188,7 +187,7 @@ class ApplyPenaltyUseCaseTest {
         assertEquals("Invoice responsible or user details not found. Cannot apply penalty.", ex1.getMessage());
 
         // Test case 2: Responsible's User is null
-        overdueInvoice.setResponsible(Responsible.builder().id(responsibleId).user(null).build());
+        overdueInvoice.setResponsible(Responsible.builder().id(responsibleId).build());
         when(invoiceRepository.findById(invoiceId)).thenReturn(Optional.of(overdueInvoice));
         BusinessException ex2 = assertThrows(BusinessException.class, () -> applyPenaltyUseCase.execute(invoiceId));
         assertEquals("Invoice responsible or user details not found. Cannot apply penalty.", ex2.getMessage());

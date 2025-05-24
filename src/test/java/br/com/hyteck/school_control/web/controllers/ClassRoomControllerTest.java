@@ -11,12 +11,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -24,9 +24,8 @@ import org.springframework.web.context.WebApplicationContext;
 
 import java.time.LocalTime;
 import java.util.Collections;
-import java.util.Optional;
 import java.util.List;
-
+import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -43,17 +42,17 @@ class ClassRoomControllerTest {
     @Autowired
     private WebApplicationContext webApplicationContext;
 
-    @MockBean
+    @MockitoBean
     private CreateClassRoom createClassRoomUseCase;
-    @MockBean
+    @MockitoBean
     private FindClassRoomById findClassRoomByIdUseCase;
-    @MockBean
+    @MockitoBean
     private FindClassRooms findAllClassRoomsUseCase;
-    @MockBean
+    @MockitoBean
     private UpdateClassRoom updateClassRoomUseCase;
-    @MockBean
+    @MockitoBean
     private DeleteClassRoom deleteClassRoomUseCase;
-    @MockBean
+    @MockitoBean
     private FindEnrollmentsByClassRoomId findEnrollmentsByClassRoomIdUseCase;
 
     @Autowired

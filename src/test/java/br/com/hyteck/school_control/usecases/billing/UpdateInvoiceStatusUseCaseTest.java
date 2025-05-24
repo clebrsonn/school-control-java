@@ -57,8 +57,8 @@ class UpdateInvoiceStatusUseCaseTest {
 
     @BeforeEach
     void setUp() {
-        User responsibleUser = User.builder().id("userRespTest1").username("respUserTest").build();
-        testResponsible = Responsible.builder().id(responsibleId).name("Test Responsible").user(responsibleUser).build();
+        User responsibleUser = User.builder().id("userRespTest1").build();
+        testResponsible = Responsible.builder().id(responsibleId).name("Test Responsible").username("respUserTest").build();
         testArAccount = Account.builder().id(arAccountId).type(AccountType.ASSET).responsible(testResponsible).build();
 
         testInvoice = Invoice.builder()
@@ -66,7 +66,7 @@ class UpdateInvoiceStatusUseCaseTest {
                 .responsible(testResponsible)
                 .status(InvoiceStatus.PENDING) // Default starting status for many tests
                 .dueDate(LocalDate.now(ZoneId.of("America/Sao_Paulo")).plusDays(10)) // Due in future
-                .originalAmount(new BigDecimal("100.00"))
+                .amount(new BigDecimal("100.00"))
                 .build();
         
         when(invoiceRepository.findById(invoiceId)).thenReturn(Optional.of(testInvoice));
@@ -178,7 +178,7 @@ class UpdateInvoiceStatusUseCaseTest {
         assertTrue(ex1.getMessage().contains("Responsible party or user details not found"));
         
         // Reset responsible and make its user null
-        testInvoice.setResponsible(Responsible.builder().id(responsibleId).user(null).build());
+        testInvoice.setResponsible(Responsible.builder().id(responsibleId).build());
         when(invoiceRepository.findById(invoiceId)).thenReturn(Optional.of(testInvoice));
         ResourceNotFoundException ex2 = assertThrows(ResourceNotFoundException.class, () -> updateInvoiceStatusUseCase.execute(invoiceId));
         assertTrue(ex2.getMessage().contains("Responsible party or user details not found"));

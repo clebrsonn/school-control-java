@@ -78,7 +78,7 @@ public class GenerateConsolidatedStatementUseCase {
                 .map(invoice -> new StatementLineItem(invoice.getId(),
                         invoice.getItems().getFirst().getEnrollment().getStudent().getName() // Assumindo que os dados estão carregados (cuidado com LAZY loading)
                         , (invoice.getDescription() + " - " + invoice.getItems().getFirst().getEnrollment().getClassroom().getName() + " - " + referenceMonth.toString()) // Exemplo
-                        , (invoice.getOriginalAmount())
+                        , (invoice.getAmount())
                         , (invoice.getDueDate())
                 ))
                 .collect(Collectors.toList());
@@ -125,7 +125,7 @@ public class GenerateConsolidatedStatementUseCase {
                     .map(item -> new StatementLineItem(invoice.getId(),
                             item.getEnrollment().getStudent().getName()
                             , item.getDescription() // Exemplo
-                            , (invoice.getOriginalAmount())
+                            , (invoice.getAmount())
                             , (invoice.getDueDate())
                     ))
                     .collect(Collectors.toList());
@@ -134,7 +134,7 @@ public class GenerateConsolidatedStatementUseCase {
                     invoice.getResponsible().getId(),
                     invoice.getResponsible().getName() // Nome do responsável
                     , referenceMonth
-                    , invoice.calculateOriginalAmount()
+                    , invoice.calculateAmount()
                     , invoice.getDueDate()
                     , items
                     // TODO: Gerar link de pagamento ou código de barras aqui, se aplicável

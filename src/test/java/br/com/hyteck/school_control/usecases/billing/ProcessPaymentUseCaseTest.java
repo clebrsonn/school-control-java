@@ -10,14 +10,12 @@ import br.com.hyteck.school_control.repositories.InvoiceRepository;
 import br.com.hyteck.school_control.repositories.PaymentRepository;
 import br.com.hyteck.school_control.repositories.financial.LedgerEntryRepository;
 import br.com.hyteck.school_control.events.PaymentProcessedEvent;
-import br.com.hyteck.school_control.models.auth.User; // Needed for responsible.user
 import br.com.hyteck.school_control.services.financial.AccountService;
 import br.com.hyteck.school_control.services.financial.LedgerService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationEventPublisher; // Added
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -57,13 +55,13 @@ class ProcessPaymentUseCaseTest {
     private Responsible responsible;
     private Account arAccount;
     private Account cashClearingAccount;
-    private String invoiceId = "inv1";
-    private String responsibleId = "resp1";
+    private final String invoiceId = "inv1";
+    private final String responsibleId = "resp1";
 
     @BeforeEach
     void setUp() {
-        User responsibleUser = User.builder().id("userResp1").username("respUser").build(); // User for responsible
-        responsible = Responsible.builder().id(responsibleId).name("Test Responsible").user(responsibleUser).build();
+
+        responsible = Responsible.builder().id(responsibleId).name("Test Responsible").username("respUser").build();
         arAccount = Account.builder().id("arAcc1").type(AccountType.ASSET).responsible(responsible).name("A/R - Test Responsible").build();
         cashClearingAccount = Account.builder().id("cashAcc1").type(AccountType.ASSET).name("Cash/Bank Clearing").build();
 
@@ -72,7 +70,7 @@ class ProcessPaymentUseCaseTest {
                 .responsible(responsible)
                 .status(InvoiceStatus.PENDING)
                 .dueDate(LocalDate.now(ZoneId.of("America/Sao_Paulo")).plusDays(5))
-                .originalAmount(new BigDecimal("200.00"))
+                .amount(new BigDecimal("200.00"))
                 .build();
         
         overdueInvoice = Invoice.builder()
@@ -80,21 +78,11 @@ class ProcessPaymentUseCaseTest {
                 .responsible(responsible)
                 .status(InvoiceStatus.OVERDUE)
                 .dueDate(LocalDate.now(ZoneId.of("America/Sao_Paulo")).minusDays(5))
-                .originalAmount(new BigDecimal("150.00"))
+                .amount(new BigDecimal("150.00"))
                 .build();
     }
 
     private void mockSuccessfulPaymentScenario(Invoice invoiceToProcess, BigDecimal paymentAmount, BigDecimal resultingBalanceOnAR) {
-        // Ensure the invoice used in the test has a responsible with a user and user ID.
-        if (invoiceToProcess.getResponsible() != null && invoiceToProcess.getResponsible().getUser() == null) {
-            User mockUser = User.builder().id("defaultUserIdForTest").build();
-            invoiceToProcess.getResponsible().setUser(mockUser);
-        } else if (invoiceToProcess.getResponsible() == null) {
-            User mockUser = User.builder().id("defaultUserIdForTest").build();
-            Responsible mockResp = Responsible.builder().id("defaultRespIdForTest").user(mockUser).build();
-            invoiceToProcess.setResponsible(mockResp);
-        }
-
 
         when(invoiceRepository.findById(invoiceToProcess.getId())).thenReturn(Optional.of(invoiceToProcess));
         when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> {
@@ -234,14 +222,14 @@ class ProcessPaymentUseCaseTest {
         assertEquals("Invoice responsible party or user details not found. Cannot process payment or publish event.", ex1.getMessage());
 
         // Test case 2: Responsible's User is null
-        pendingInvoice.setResponsible(Responsible.builder().id(responsibleId).user(null).build()); // User is null
+        pendingInvoice.setResponsible(Responsible.builder().id(responsibleId).build()); // User is null
         when(invoiceRepository.findById(invoiceId)).thenReturn(Optional.of(pendingInvoice));
         BusinessException ex2 = assertThrows(BusinessException.class, () ->
             processPaymentUseCase.execute(invoiceId, new BigDecimal("100"), PaymentMethod.CREDIT_CARD));
         assertEquals("Invoice responsible party or user details not found. Cannot process payment or publish event.", ex2.getMessage());
         
         // Test case 3: Responsible's User ID is null
-        pendingInvoice.setResponsible(Responsible.builder().id(responsibleId).user(User.builder().id(null).build()).build()); // User ID is null
+        pendingInvoice.setResponsible(Responsible.builder().id(responsibleId).build()); // User ID is null
         when(invoiceRepository.findById(invoiceId)).thenReturn(Optional.of(pendingInvoice));
         BusinessException ex3 = assertThrows(BusinessException.class, () ->
             processPaymentUseCase.execute(invoiceId, new BigDecimal("100"), PaymentMethod.CREDIT_CARD));
