@@ -1,250 +1,311 @@
 package br.com.hyteck.school_control.usecases.billing;
 
+import br.com.hyteck.school_control.models.classrooms.Classroom;
 import br.com.hyteck.school_control.models.classrooms.Enrollment;
 import br.com.hyteck.school_control.models.classrooms.Student;
-import br.com.hyteck.school_control.models.financial.Account;
-import br.com.hyteck.school_control.models.financial.AccountType;
-import br.com.hyteck.school_control.models.financial.LedgerEntryType;
+import br.com.hyteck.school_control.models.finance.Account;
+import br.com.hyteck.school_control.models.finance.AccountType;
+import br.com.hyteck.school_control.models.finance.LedgerEntryType;
 import br.com.hyteck.school_control.models.payments.*;
 import br.com.hyteck.school_control.repositories.DiscountRepository;
 import br.com.hyteck.school_control.repositories.EnrollmentRepository;
 import br.com.hyteck.school_control.repositories.InvoiceRepository;
-import br.com.hyteck.school_control.services.financial.AccountService;
+import br.com.hyteck.school_control.services.AccountService;
+import br.com.hyteck.school_control.services.LedgerService;
 import br.com.hyteck.school_control.events.BatchInvoiceGeneratedEvent;
-import br.com.hyteck.school_control.services.financial.LedgerService;
-import br.com.hyteck.school_control.usecases.notification.CreateNotification; // Will be removed from actual use case
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.context.ApplicationEventPublisher; // Added
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
+import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
+
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class GenerateInvoicesForParentsTest {
 
     @Mock
+    private DiscountRepository discountRepository;
+    @Mock
     private EnrollmentRepository enrollmentRepository;
     @Mock
     private InvoiceRepository invoiceRepository;
-    @Mock
-    private DiscountRepository discountRepository;
-    // @Mock // CreateNotification will be removed from the use case's direct dependencies
-    // private CreateNotification createNotificationUseCase; 
     @Mock
     private AccountService accountService;
     @Mock
     private LedgerService ledgerService;
     @Mock
-    private ApplicationEventPublisher eventPublisher; // Added
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private GenerateInvoicesForParents generateInvoicesForParents;
 
     private YearMonth targetMonth;
+    private Account responsibleARAccount;
+    private Account tuitionRevenueAccount;
+    // discountExpenseAccount is no longer directly used in ledger postings for itemized discounts
+    // private Account discountExpenseAccount; 
     private Responsible responsible1;
     private Student student1;
-    private Enrollment enrollment1;
-    private Account arAccountResp1;
-    private Account tuitionRevenueAccount;
-    private Account discountExpenseAccount;
-    private Discount discountPolicy;
+    private Classroom classroom1;
 
     @BeforeEach
     void setUp() {
-        targetMonth = YearMonth.of(2023, 10);
-        LocalDateTime fixedDateTime = LocalDateTime.of(2023, 10, 5, 10, 0, 0); // Fixed point in time for tests
+        targetMonth = YearMonth.of(2023, 7); 
 
-        responsible1 = Responsible.builder().id("resp1").name("Responsible One").build();
-        student1 = Student.builder().id("stud1").name("Student One").responsible(responsible1).build();
-        enrollment1 = Enrollment.builder()
-                .id("enroll1")
-                .student(student1)
-                .monthlyFee(new BigDecimal("300.00"))
+        responsible1 = createResponsible("resp1", "Responsible 1");
+        student1 = createStudent("stud1", "Student 1", responsible1);
+        classroom1 = createClassroom("classA", "Class A");
+
+        responsibleARAccount = Account.builder().id("arAccountId").name("Responsible A/R").type(AccountType.ASSET).build();
+        tuitionRevenueAccount = Account.builder().id("tuitionRevenueAccountId").name("Tuition Revenue").type(AccountType.REVENUE).build();
+        // discountExpenseAccount = Account.builder().id("discountExpenseAccountId").name("Discount Expense").type(AccountType.EXPENSE).build();
+    }
+
+    private Responsible createResponsible(String id, String name) {
+        return Responsible.builder().id(id).name(name).user(br.com.hyteck.school_control.models.auth.User.builder().id(id).build()).build();
+    }
+
+    private Student createStudent(String id, String name, Responsible responsible) {
+        return Student.builder().id(id).name(name).responsible(responsible).build();
+    }
+    
+    private Classroom createClassroom(String id, String name) {
+        return Classroom.builder().id(id).name(name).build();
+    }
+
+    private Enrollment createEnrollment(String id, Student student, BigDecimal monthlyFee, Classroom classroom) {
+        return Enrollment.builder()
+                .id(id)
+                .student(student)
+                .monthlyFee(monthlyFee)
                 .status(Enrollment.Status.ACTIVE)
-                .build();
-
-        arAccountResp1 = Account.builder().id("ar1").type(AccountType.ASSET).responsible(responsible1).name("A/R - Responsible One").build();
-        tuitionRevenueAccount = Account.builder().id("revAcc").type(AccountType.REVENUE).name("Tuition Revenue").build();
-        discountExpenseAccount = Account.builder().id("discExpAcc").type(AccountType.EXPENSE).name("Sibling Discount").build();
-        
-        discountPolicy = Discount.builder().id("discPolicy1").name("Sibling Discount").type(Types.MENSALIDADE).value(new BigDecimal("50.00")).build();
-
-        // Mock fixed time for ZoneId.of("America/Sao_Paulo") usage inside the use case
-        // This is tricky, direct mocking of static ZoneId.of or LocalDateTime.now is complex.
-        // It's better if the UseCase accepts a Clock or LocalDateTime as a parameter for testability,
-        // or if the critical date/time is passed into the method.
-        // For now, we'll assume the transactionDateTime is roughly the test execution time,
-        // and dueDate calculation is deterministic based on targetMonth and this "now".
-    }
-
-    private Invoice commonInvoiceSetup(Responsible responsible, YearMonth month) {
-        LocalDate issueDate = LocalDate.now(ZoneId.of("America/Sao_Paulo")); // This will use actual now, be mindful in assertions
-        LocalDate dueDate = issueDate.getDayOfMonth() > 10
-                ? LocalDate.of(month.getYear(), month.getMonth().plus(1), 10)
-                : month.atDay(10);
-        
-        return Invoice.builder()
-                .responsible(responsible)
-                .referenceMonth(month)
-                .issueDate(issueDate)
-                .dueDate(dueDate)
-                .status(InvoiceStatus.PENDING)
-                .description("Fatura Mensal Consolidada " + month.getMonth().getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.forLanguageTag("pt-BR")) + "/" + month.getYear())
-                .items(new ArrayList<>()) // Ensure items list is initialized
+                .classroom(classroom)
                 .build();
     }
 
-
+    // --- Edge Case Tests (Largely Unchanged) ---
     @Test
-    void execute_ShouldGenerateInvoiceAndPostLedgerEntries_ForSingleStudent() {
-        // Arrange
-        when(enrollmentRepository.findByStatus(Enrollment.Status.ACTIVE)).thenReturn(List.of(enrollment1));
-        when(invoiceRepository.existsByResponsibleIdAndReferenceMonthAndItems_Enrollment_Id(
-                responsible1.getId(), targetMonth, enrollment1.getId(), Types.MENSALIDADE))
-                .thenReturn(false); // Not already billed
-        
-        Invoice expectedInvoice = commonInvoiceSetup(responsible1, targetMonth);
-        expectedInvoice.addItem(InvoiceItem.builder().enrollment(enrollment1).type(Types.MENSALIDADE).description("Mensalidade").amount(enrollment1.getMonthlyFee()).build());
-        expectedInvoice.updateAmount(); // amount will be 300.00
-        expectedInvoice.setId("invGenId1"); // Simulate save setting an ID
-
-        when(invoiceRepository.save(any(Invoice.class))).thenReturn(expectedInvoice);
-        when(accountService.findOrCreateResponsibleARAccount(responsible1.getId())).thenReturn(arAccountResp1);
-        when(accountService.findOrCreateAccount("Tuition Revenue", AccountType.REVENUE, null)).thenReturn(tuitionRevenueAccount);
-        doNothing().when(ledgerService).postTransaction(any(Invoice.class), eq(null), any(Account.class), any(Account.class), any(BigDecimal.class), any(LocalDateTime.class), anyString(), any(LedgerEntryType.class));
-        // doNothing().when(createNotificationUseCase).execute(anyString(), anyString(), anyString(), anyString()); // Removed
-        doNothing().when(eventPublisher).publishEvent(any(BatchInvoiceGeneratedEvent.class)); // Added
-        when(discountRepository.findByTypeAndValidAtBeforeToday(Types.MENSALIDADE)).thenReturn(Optional.empty()); // No discount policy
-
-
-        // Act
+    void execute_noActiveEnrollments_shouldNotCreateInvoicesOrPostTransactions() {
+        when(enrollmentRepository.findByStatus(Enrollment.Status.ACTIVE)).thenReturn(Collections.emptyList());
         generateInvoicesForParents.execute(targetMonth);
-
-        // Assert
-        verify(invoiceRepository).save(any(Invoice.class));
-        
-        ArgumentCaptor<Invoice> invoiceCaptor = ArgumentCaptor.forClass(Invoice.class);
-        verify(invoiceRepository).save(invoiceCaptor.capture());
-        assertEquals(new BigDecimal("300.00"), invoiceCaptor.getValue().getAmount());
-
-        verify(ledgerService).postTransaction(
-                eq(expectedInvoice), eq(null), eq(arAccountResp1), eq(tuitionRevenueAccount),
-                eq(new BigDecimal("300.00")), any(LocalDateTime.class),
-                contains("Cobrança Total Mensalidades"), eq(LedgerEntryType.TUITION_FEE)
-        );
-        // verify(createNotificationUseCase).execute(eq("user1"), anyString(), eq("/invoices/invGenId1"), eq("NEW_MONTHLY_INVOICE")); // Removed
-        verify(eventPublisher).publishEvent(any(BatchInvoiceGeneratedEvent.class)); // Added
-    }
-
-    @Test
-    void execute_ShouldApplyDiscount_ForMultipleStudentsFromSameResponsible() {
-        // Arrange
-        Student student2 = Student.builder().id("stud2").name("Student Two").responsible(responsible1).build();
-        Enrollment enrollment2 = Enrollment.builder().id("enroll2").student(student2).monthlyFee(new BigDecimal("250.00")).status(Enrollment.Status.ACTIVE).build();
-        List<Enrollment> enrollments = List.of(enrollment1, enrollment2);
-
-        when(enrollmentRepository.findByStatus(Enrollment.Status.ACTIVE)).thenReturn(enrollments);
-        when(invoiceRepository.existsByResponsibleIdAndReferenceMonthAndItems_Enrollment_Id(anyString(), any(YearMonth.class), anyString(), any(Types.class)))
-                .thenReturn(false); // None are pre-billed
-
-        Invoice expectedInvoice = commonInvoiceSetup(responsible1, targetMonth);
-        // Items will be added inside computeIfAbsent and loop, then amount calculated
-        expectedInvoice.setId("invGenId2");
-
-        when(invoiceRepository.save(any(Invoice.class))).thenAnswer(invocation -> {
-            Invoice inv = invocation.getArgument(0);
-            inv.setId(expectedInvoice.getId()); // Ensure ID is set for notification link
-            // Manually add items as the use case would, to correctly calculate amount for the captor
-            if(inv.getItems().isEmpty()){ // prevent adding twice if test setup is complex
-                inv.addItem(InvoiceItem.builder().enrollment(enrollment1).type(Types.MENSALIDADE).description("").amount(enrollment1.getMonthlyFee()).build());
-                inv.addItem(InvoiceItem.builder().enrollment(enrollment2).type(Types.MENSALIDADE).description("").amount(enrollment2.getMonthlyFee()).build());
-                inv.updateAmount();
-            }
-            return inv;
-        });
-
-        when(accountService.findOrCreateResponsibleARAccount(responsible1.getId())).thenReturn(arAccountResp1);
-        when(accountService.findOrCreateAccount("Tuition Revenue", AccountType.REVENUE, null)).thenReturn(tuitionRevenueAccount);
-        when(discountRepository.findByTypeAndValidAtBeforeToday(Types.MENSALIDADE)).thenReturn(Optional.of(discountPolicy));
-        when(accountService.findOrCreateAccount(discountPolicy.getName(), AccountType.EXPENSE, null)).thenReturn(discountExpenseAccount);
-
-        doNothing().when(ledgerService).postTransaction(any(Invoice.class), eq(null), any(Account.class), any(Account.class), any(BigDecimal.class), any(LocalDateTime.class), anyString(), any(LedgerEntryType.class));
-        // doNothing().when(createNotificationUseCase).execute(anyString(), anyString(), anyString(), anyString()); // Removed
-        doNothing().when(eventPublisher).publishEvent(any(BatchInvoiceGeneratedEvent.class)); // Added
-
-        // Act
-        generateInvoicesForParents.execute(targetMonth);
-
-        // Assert
-        ArgumentCaptor<Invoice> invoiceCaptor = ArgumentCaptor.forClass(Invoice.class);
-        verify(invoiceRepository).save(invoiceCaptor.capture());
-        Invoice savedInvoice = invoiceCaptor.getValue();
-        assertEquals(new BigDecimal("550.00"), savedInvoice.getAmount()); // 300 + 250
-
-        // Verify tuition fee posting for total original amount
-        verify(ledgerService).postTransaction(
-                eq(savedInvoice), eq(null), eq(arAccountResp1), eq(tuitionRevenueAccount),
-                eq(new BigDecimal("550.00")), any(LocalDateTime.class),
-                contains("Cobrança Total Mensalidades"), eq(LedgerEntryType.TUITION_FEE)
-        );
-
-        // Verify discount posting
-        verify(ledgerService).postTransaction(
-                eq(savedInvoice), eq(null), eq(discountExpenseAccount), eq(arAccountResp1),
-                eq(discountPolicy.getValue()), any(LocalDateTime.class), // discountPolicy.getValue() is 50.00
-                contains("Desconto Multi-alunos"), eq(LedgerEntryType.DISCOUNT_APPLIED)
-        );
-        verify(eventPublisher).publishEvent(any(BatchInvoiceGeneratedEvent.class)); // Added
-        // ArgumentCaptor<String> notificationMsgCaptor = ArgumentCaptor.forClass(String.class); // No longer need to capture notification message here
-        // verify(createNotificationUseCase).execute(eq("user1"), notificationMsgCaptor.capture(), eq("/invoices/invGenId2"), eq("NEW_MONTHLY_INVOICE"));
-        // assertTrue(notificationMsgCaptor.getValue().contains("R$\\u00A0500,00"), "Notification message amount mismatch. Actual: " + notificationMsgCaptor.getValue());
-    }
-
-    @Test
-    void execute_ShouldSkipEnrollment_IfAlreadyBilled() {
-        when(enrollmentRepository.findByStatus(Enrollment.Status.ACTIVE)).thenReturn(List.of(enrollment1));
-        when(invoiceRepository.existsByResponsibleIdAndReferenceMonthAndItems_Enrollment_Id(
-                responsible1.getId(), targetMonth, enrollment1.getId(), Types.MENSALIDADE))
-                .thenReturn(true); // Already billed
-
-        generateInvoicesForParents.execute(targetMonth);
-
         verify(invoiceRepository, never()).save(any(Invoice.class));
-        verifyNoInteractions(ledgerService);
-        // verifyNoInteractions(createNotificationUseCase); // Removed
-        verifyNoInteractions(eventPublisher); // Added
+        verify(ledgerService, never()).postTransaction(any(), any(), any(), any(), any(), any(), any(), any());
+        verify(eventPublisher, never()).publishEvent(any(BatchInvoiceGeneratedEvent.class));
+    }
+
+    @Test
+    void execute_enrollmentWithZeroMonthlyFee_shouldSkipEnrollment() {
+        Enrollment enrollment = createEnrollment("enroll1", student1, BigDecimal.ZERO, classroom1); 
+        when(enrollmentRepository.findByStatus(Enrollment.Status.ACTIVE)).thenReturn(List.of(enrollment));
+        generateInvoicesForParents.execute(targetMonth);
+        verify(invoiceRepository, never()).save(any(Invoice.class));
     }
     
     @Test
-    void execute_ShouldDoNothing_WhenNoActiveEnrollments() {
-        when(enrollmentRepository.findByStatus(Enrollment.Status.ACTIVE)).thenReturn(Collections.emptyList());
+    void execute_enrollmentWithNullMonthlyFee_shouldSkipEnrollment() {
+        Enrollment enrollment = createEnrollment("enroll1", student1, null, classroom1);
+        when(enrollmentRepository.findByStatus(Enrollment.Status.ACTIVE)).thenReturn(List.of(enrollment));
+        generateInvoicesForParents.execute(targetMonth);
+        verify(invoiceRepository, never()).save(any(Invoice.class));
+    }
+
+    @Test
+    void execute_enrollmentWithNoResponsible_shouldSkipEnrollment() {
+        Student studentNoResponsible = createStudent("studNR", "Student No Responsible", null);
+        Enrollment enrollment = createEnrollment("enrollNR", studentNoResponsible, new BigDecimal("100"), classroom1);
+        when(enrollmentRepository.findByStatus(Enrollment.Status.ACTIVE)).thenReturn(List.of(enrollment));
+        generateInvoicesForParents.execute(targetMonth);
+        verify(invoiceRepository, never()).save(any(Invoice.class));
+    }
+
+    @Test
+    void execute_invoiceAlreadyBilled_shouldSkipEnrollment() {
+        Enrollment enrollment = createEnrollment("enrollBilled", student1, new BigDecimal("100"), classroom1);
+        when(enrollmentRepository.findByStatus(Enrollment.Status.ACTIVE)).thenReturn(List.of(enrollment));
+        when(invoiceRepository.existsByResponsibleIdAndReferenceMonthAndItems_Enrollment_Id(
+                eq(responsible1.getId()), eq(targetMonth), eq(enrollment.getId()), eq(Types.MENSALIDADE)))
+                .thenReturn(true);
+        generateInvoicesForParents.execute(targetMonth);
+        verify(invoiceRepository, never()).save(any(Invoice.class));
+    }
+
+    // --- Core Logic Tests (Updated for Net OriginalAmount and Itemized Discounts) ---
+    @Test
+    void execute_successfulInvoiceGeneration_singleEnrollment_noDiscount() {
+        Enrollment enrollment = createEnrollment("enrollSingle", student1, new BigDecimal("500.00"), classroom1);
+        when(enrollmentRepository.findByStatus(Enrollment.Status.ACTIVE)).thenReturn(List.of(enrollment));
+        when(invoiceRepository.existsByResponsibleIdAndReferenceMonthAndItems_Enrollment_Id(anyString(), any(), anyString(), any())).thenReturn(false); 
+        when(accountService.findOrCreateAccount(eq(GenerateInvoicesForParents.TUITION_REVENUE_ACCOUNT_NAME), eq(AccountType.REVENUE),isNull())).thenReturn(tuitionRevenueAccount);
+        when(accountService.findOrCreateResponsibleARAccount(eq(responsible1.getId()))).thenReturn(responsibleARAccount);
+        
+        // Simulate the invoice being saved
+        Invoice savedInvoice = Invoice.builder().id("invGenerated123").responsible(responsible1).referenceMonth(targetMonth).originalAmount(new BigDecimal("500.00")).items(new ArrayList<>()).build();
+        savedInvoice.addItem(InvoiceItem.builder().enrollment(enrollment).type(Types.MENSALIDADE).amount(new BigDecimal("500.00")).build());
+        // No discount item, so originalAmount remains 500.00 after updateOriginalAmount() inside use case
+
+        ArgumentCaptor<Invoice> invoiceCaptor = ArgumentCaptor.forClass(Invoice.class);
+        when(invoiceRepository.save(invoiceCaptor.capture())).thenReturn(savedInvoice); // Return the "saved" invoice with ID
 
         generateInvoicesForParents.execute(targetMonth);
 
-        verify(invoiceRepository, never()).save(any(Invoice.class));
-        verifyNoInteractions(accountService);
-        verifyNoInteractions(ledgerService);
-        // verifyNoInteractions(createNotificationUseCase); // Removed
-        verifyNoInteractions(eventPublisher); // Added
+        verify(invoiceRepository).save(any(Invoice.class));
+        Invoice capturedInvoice = invoiceCaptor.getValue();
+        assertEquals(new BigDecimal("500.00"), capturedInvoice.getOriginalAmount(), "Original amount should be the gross fee as no discount applies.");
+        assertEquals(1, capturedInvoice.getItems().size());
+        assertEquals(Types.MENSALIDADE, capturedInvoice.getItems().get(0).getType());
+
+        verify(ledgerService).postTransaction(
+                eq(savedInvoice), isNull(), eq(responsibleARAccount), eq(tuitionRevenueAccount),
+                eq(new BigDecimal("500.00")), // Net amount (which is gross here)
+                any(LocalDateTime.class), anyString(), eq(LedgerEntryType.TUITION_FEE)
+        );
+        verify(eventPublisher).publishEvent(any(BatchInvoiceGeneratedEvent.class));
+    }
+
+    @Test
+    void execute_successfulInvoiceGeneration_multipleEnrollments_sameResponsible_withFixedDiscount() {
+        Student student2 = createStudent("studD2", "Student D2", responsible1);
+        Enrollment enrollment1 = createEnrollment("enrollD1", student1, new BigDecimal("400.00"), classroom1);
+        Enrollment enrollment2 = createEnrollment("enrollD2", student2, new BigDecimal("350.00"), createClassroom("classB", "Class B"));
+        List<Enrollment> enrollments = List.of(enrollment1, enrollment2);
+
+        Discount fixedDiscountPolicy = Discount.builder()
+            .id("discFixed1").name("Fixed Sibling Discount").type(Types.MENSALIDADE)
+            .fixedValue(new BigDecimal("50.00")).validAt(LocalDate.now().minusDays(1)).build();
+
+        when(enrollmentRepository.findByStatus(Enrollment.Status.ACTIVE)).thenReturn(enrollments);
+        when(invoiceRepository.existsByResponsibleIdAndReferenceMonthAndItems_Enrollment_Id(anyString(), any(), anyString(), any())).thenReturn(false);
+        when(discountRepository.findByTypeAndValidAtBeforeToday(Types.MENSALIDADE)).thenReturn(Optional.of(fixedDiscountPolicy));
+        when(accountService.findOrCreateAccount(eq(GenerateInvoicesForParents.TUITION_REVENUE_ACCOUNT_NAME), eq(AccountType.REVENUE),isNull())).thenReturn(tuitionRevenueAccount);
+        when(accountService.findOrCreateResponsibleARAccount(eq(responsible1.getId()))).thenReturn(responsibleARAccount);
+
+        // Simulate the invoice being saved
+        BigDecimal expectedNetOgirinalAmount = new BigDecimal("750.00").subtract(new BigDecimal("50.00")); // 700.00
+        Invoice savedInvoice = Invoice.builder().id("invFixedDisc789").responsible(responsible1).referenceMonth(targetMonth).originalAmount(expectedNetOgirinalAmount).items(new ArrayList<>()).build();
+          // Items will be added by the use case logic before save is called.
+          // The originalAmount in savedInvoice mock should reflect the *final* net amount.
+
+        ArgumentCaptor<Invoice> invoiceCaptor = ArgumentCaptor.forClass(Invoice.class);
+        when(invoiceRepository.save(invoiceCaptor.capture())).thenAnswer(invocation -> {
+            Invoice inv = invocation.getArgument(0);
+            inv.setId("invFixedDisc789"); // Set ID as if saved
+            return inv; // Return the same captured invoice, now with an ID
+        });
+
+
+        generateInvoicesForParents.execute(targetMonth);
+
+        verify(invoiceRepository).save(any(Invoice.class));
+        Invoice capturedInvoice = invoiceCaptor.getValue();
+        
+        assertEquals(new BigDecimal("700.00"), capturedInvoice.getOriginalAmount(), "Original amount should be NET (750 - 50).");
+        assertEquals(3, capturedInvoice.getItems().size(), "Should have 2 tuition items and 1 discount item.");
+        
+        assertTrue(capturedInvoice.getItems().stream().anyMatch(item -> item.getType() == Types.MENSALIDADE && item.getAmount().compareTo(new BigDecimal("400.00")) == 0));
+        assertTrue(capturedInvoice.getItems().stream().anyMatch(item -> item.getType() == Types.MENSALIDADE && item.getAmount().compareTo(new BigDecimal("350.00")) == 0));
+        Optional<InvoiceItem> discountItemOpt = capturedInvoice.getItems().stream().filter(item -> item.getType() == Types.DESCONTO).findFirst();
+        assertTrue(discountItemOpt.isPresent(), "Discount item should be present.");
+        assertEquals(new BigDecimal("-50.00"), discountItemOpt.get().getAmount(), "Discount item amount should be negative.");
+        assertEquals(fixedDiscountPolicy.getName(), discountItemOpt.get().getDescription());
+
+
+        verify(ledgerService).postTransaction(
+                any(Invoice.class), // or eq(capturedInvoice) if ID is set before ledgerService call
+                isNull(), 
+                eq(responsibleARAccount), 
+                eq(tuitionRevenueAccount),
+                eq(new BigDecimal("700.00")), // NET amount
+                any(LocalDateTime.class), 
+                contains("(Líquido de Descontos Itemizados)"), // Verify description reflects net posting
+                eq(LedgerEntryType.TUITION_FEE)
+        );
+        // Ensure no separate discount ledger posting for this itemized discount
+        verify(ledgerService, times(1)).postTransaction(any(),any(),any(),any(),any(),any(),any(),any());
+        verify(eventPublisher).publishEvent(any(BatchInvoiceGeneratedEvent.class));
+    }
+    
+    @Test
+    void execute_successfulInvoiceGeneration_withPercentageDiscount() {
+        Student student2 = createStudent("studPD2", "Student PD2", responsible1);
+        Enrollment enrollment1 = createEnrollment("enrollPD1", student1, new BigDecimal("1000.00"), classroom1);
+        Enrollment enrollment2 = createEnrollment("enrollPD2", student2, new BigDecimal("800.00"), createClassroom("classB", "Class B"));
+        List<Enrollment> enrollments = List.of(enrollment1, enrollment2);
+
+        Discount percentageDiscountPolicy = Discount.builder()
+            .id("discPerc1").name("Percentage Sibling Discount").type(Types.MENSALIDADE)
+            .percentage(new BigDecimal("10.00")).validAt(LocalDate.now().minusDays(1)).build(); // 10%
+
+        when(enrollmentRepository.findByStatus(Enrollment.Status.ACTIVE)).thenReturn(enrollments);
+        when(invoiceRepository.existsByResponsibleIdAndReferenceMonthAndItems_Enrollment_Id(anyString(), any(), anyString(), any())).thenReturn(false);
+        when(discountRepository.findByTypeAndValidAtBeforeToday(Types.MENSALIDADE)).thenReturn(Optional.of(percentageDiscountPolicy));
+        when(accountService.findOrCreateAccount(eq(GenerateInvoicesForParents.TUITION_REVENUE_ACCOUNT_NAME), eq(AccountType.REVENUE), isNull())).thenReturn(tuitionRevenueAccount);
+        when(accountService.findOrCreateResponsibleARAccount(eq(responsible1.getId()))).thenReturn(responsibleARAccount);
+
+        BigDecimal grossAmount = new BigDecimal("1800.00"); // 1000 + 800
+        BigDecimal discountAmount = grossAmount.multiply(new BigDecimal("0.10")); // 180.00
+        BigDecimal netAmount = grossAmount.subtract(discountAmount); // 1620.00
+
+        ArgumentCaptor<Invoice> invoiceCaptor = ArgumentCaptor.forClass(Invoice.class);
+         when(invoiceRepository.save(invoiceCaptor.capture())).thenAnswer(invocation -> {
+            Invoice inv = invocation.getArgument(0);
+            inv.setId("invPercDisc123"); 
+            return inv;
+        });
+
+        generateInvoicesForParents.execute(targetMonth);
+
+        verify(invoiceRepository).save(any(Invoice.class));
+        Invoice capturedInvoice = invoiceCaptor.getValue();
+
+        assertEquals(netAmount, capturedInvoice.getOriginalAmount(), "Original amount should be NET (1800 - 180).");
+        assertEquals(3, capturedInvoice.getItems().size(), "Should have 2 tuition items and 1 discount item.");
+        Optional<InvoiceItem> discountItemOpt = capturedInvoice.getItems().stream().filter(item -> item.getType() == Types.DESCONTO).findFirst();
+        assertTrue(discountItemOpt.isPresent(), "Discount item should be present.");
+        assertEquals(discountAmount.negate(), discountItemOpt.get().getAmount(), "Discount item amount should be -180.00.");
+
+        verify(ledgerService).postTransaction(
+                any(Invoice.class), isNull(), eq(responsibleARAccount), eq(tuitionRevenueAccount),
+                eq(netAmount), // NET amount
+                any(LocalDateTime.class), contains("(Líquido de Descontos Itemizados)"), eq(LedgerEntryType.TUITION_FEE)
+        );
+        verify(ledgerService, times(1)).postTransaction(any(),any(),any(),any(),any(),any(),any(),any());
+        verify(eventPublisher).publishEvent(any(BatchInvoiceGeneratedEvent.class));
+    }
+    
+    @Test
+    void execute_ledgerTransactionFailure_shouldThrowExceptionAndNotPublishEvent() {
+        Enrollment enrollment = createEnrollment("enrollFail", student1, new BigDecimal("100"), classroom1);
+        when(enrollmentRepository.findByStatus(Enrollment.Status.ACTIVE)).thenReturn(List.of(enrollment));
+        when(invoiceRepository.existsByResponsibleIdAndReferenceMonthAndItems_Enrollment_Id(anyString(), any(), anyString(), any())).thenReturn(false);
+        when(accountService.findOrCreateAccount(eq(GenerateInvoicesForParents.TUITION_REVENUE_ACCOUNT_NAME), eq(AccountType.REVENUE), isNull())).thenReturn(tuitionRevenueAccount);
+        when(accountService.findOrCreateResponsibleARAccount(eq(responsible1.getId()))).thenReturn(responsibleARAccount);
+
+        when(invoiceRepository.save(any(Invoice.class))).thenAnswer(invocation -> {
+            Invoice inv = invocation.getArgument(0);
+            inv.setId("invFailLedger123");
+            return inv;
+        });
+        
+        doThrow(new RuntimeException("Ledger posting failed")).when(ledgerService).postTransaction(any(), isNull(), any(), any(), any(), any(), anyString(), eq(LedgerEntryType.TUITION_FEE));
+
+        assertThrows(RuntimeException.class, () -> generateInvoicesForParents.execute(targetMonth));
+        verify(invoiceRepository).save(any(Invoice.class));
+        verify(eventPublisher, never()).publishEvent(any(BatchInvoiceGeneratedEvent.class));
     }
 }

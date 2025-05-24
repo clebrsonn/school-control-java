@@ -1,10 +1,15 @@
 package br.com.hyteck.school_control.usecases.billing;
 
 import br.com.hyteck.school_control.models.classrooms.Enrollment;
+import br.com.hyteck.school_control.models.finance.Account;
+import br.com.hyteck.school_control.models.finance.AccountType;
+import br.com.hyteck.school_control.models.finance.LedgerEntryType;
 import br.com.hyteck.school_control.models.payments.*;
 import br.com.hyteck.school_control.repositories.DiscountRepository;
 import br.com.hyteck.school_control.repositories.EnrollmentRepository;
 import br.com.hyteck.school_control.repositories.InvoiceRepository;
+import br.com.hyteck.school_control.services.AccountService;
+import br.com.hyteck.school_control.services.LedgerService;
 import br.com.hyteck.school_control.usecases.notification.CreateNotification;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -14,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -34,9 +40,13 @@ public class GenerateInvoicesForParents {
     private final EnrollmentRepository enrollmentRepository;
     private final InvoiceRepository invoiceRepository;
     private final CreateNotification createNotification;
+    private final LedgerService ledgerService;
+    private final AccountService accountService;
 
     // Constants for Brazilian Portuguese locale, date and currency formatting.
     private static final Locale BRAZIL_LOCALE = Locale.of("pt", "BR");
+    private static final String TUITION_REVENUE_ACCOUNT_NAME = "Tuition Revenue";
+    private static final String DISCOUNT_EXPENSE_ACCOUNT_NAME = "Discount Expense";
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy", BRAZIL_LOCALE);
     private static final NumberFormat CURRENCY_FORMATTER = NumberFormat.getCurrencyInstance(BRAZIL_LOCALE);
 
@@ -116,19 +126,6 @@ public class GenerateInvoicesForParents {
                         .build();
             });
 
-            // Apply discount if this is the second (or more) student for the same responsible on this invoice
-            // and a discount is available.
-            if (!monthlyInvoice.getItems().isEmpty()) { // Indicates more than one student for this responsible
-                monthlyFeeDiscount.ifPresent(discount -> {
-                    // Ensure discount is not already added
-                    if (monthlyInvoice.getDiscounts().stream().noneMatch(d -> d.getId().equals(discount.getId()))) {
-                        monthlyInvoice.getDiscounts().add(discount);
-                        log.info("Applied discount '{}' to invoice for responsible {}", discount.getDescription(), responsible.getId());
-                    }
-                });
-            }
-
-
             // Create an invoice item for the current enrollment's monthly fee.
             InvoiceItem monthlyFeeItem = InvoiceItem.builder()
                     .enrollment(enrollment)
@@ -141,58 +138,160 @@ public class GenerateInvoicesForParents {
             monthlyInvoice.addItem(monthlyFeeItem);
             // The amount is recalculated via @PrePersist/@PreUpdate in Invoice entity,
             // but we can call it here if we need the updated amount immediately.
-            // monthlyInvoice.setAmount(monthlyInvoice.calculateTotalAmount());
+            monthlyInvoice.updateOriginalAmount(); // Explicitly calculate original amount
         }
 
-        // Save all created or updated invoices.
+        // Save all created or updated invoices and post ledger transactions.
         if (!invoicesByResponsibleId.isEmpty()) {
-            List<Invoice> savedInvoices = invoiceRepository.saveAll(invoicesByResponsibleId.values());
-            log.info("{} monthly invoices saved successfully for month {}.", savedInvoices.size(), targetMonth);
+            Account tuitionRevenueAccount = accountService.findOrCreateAccount(TUITION_REVENUE_ACCOUNT_NAME, AccountType.REVENUE, null);
+            log.info("Retrieved/Created Tuition Revenue account: {}", tuitionRevenueAccount.getName());
+            // Discount Expense account is not directly used for ledger posting anymore if discounts are itemized.
+            // It might still be relevant for other accounting purposes or if other discount types exist that are not itemized.
+            // For now, we remove its direct retrieval here as it's not used in the immediate subsequent logic.
+            // Account discountExpenseAccount = accountService.findOrCreateAccount(DISCOUNT_EXPENSE_ACCOUNT_NAME, AccountType.EXPENSE, null);
+            // log.info("Retrieved/Created Discount Expense account: {}", discountExpenseAccount.getName());
 
-            // Send notifications to responsibles about the new invoices.
-            savedInvoices.forEach(invoice -> {
+            for (Invoice invoice : invoicesByResponsibleId.values()) {
                 Responsible responsible = invoice.getResponsible();
+                Account responsibleARAccount = accountService.findOrCreateResponsibleARAccount(responsible.getId());
+                log.info("Retrieved/Created A/R account for responsible {}: {}", responsible.getName(), responsibleARAccount.getName());
+
+                // Calculate total discount amount for this invoice based on its items and applicable discounts.
+                // This is a simplified example. Real discount logic might be more complex.
+                // For this example, we'll use the previously fetched monthlyFeeDiscount if more than one item exists.
+                BigDecimal totalDiscountAmount = BigDecimal.ZERO;
+                if (invoice.getItems().size() > 1) { // Condition for applying discount
+                    Optional<Discount> discountToApply = discountRepository.findByTypeAndValidAtBeforeToday(Types.MENSALIDADE);
+                    if (discountToApply.isPresent()) {
+                        // This is a placeholder for actual discount calculation logic.
+                        // Assuming discount is a fixed amount or percentage of the first item, etc.
+                        // For simplicity, let's say it's a fixed amount per additional student.
+                        // This should be replaced with actual discount calculation rules.
+                        // Here, we're just using the discount's percentage on the sum of other items, as an example.
+                        // Or if it's a fixed amount, use that. The current Discount model is flexible.
+                        // Let's assume the discount value is a fixed amount to be applied if criteria met.
+                        // This logic part needs to be robust based on how discounts are defined.
+                        // For now, if a discount is present and applicable (e.g. >1 student), we apply its amount.
+                        // This is a critical point: The discount amount calculation logic needs to be accurate.
+                        // The original code added the *Discount object* to the invoice. We need the *amount*.
+                        // Let's assume the discount object has a getAmount() or similar.
+                        // The current Discount model has `percentage` and `fixedValue`.
+                        // We need to decide how to apply this. Let's assume for this example,
+                        // if a 'MENSALIDADE' discount is found, and there's >1 student,
+                        // we apply its fixedValue if not null, otherwise percentage of the originalAmount.
+                        // This is a placeholder for potentially complex discount rules.
+
+                        Discount actualDiscount = discountToApply.get();
+                        // The variable totalDiscountAmount will still be used for the separate ledger posting in this subtask.
+                        if (actualDiscount.getFixedValue() != null && actualDiscount.getFixedValue().compareTo(BigDecimal.ZERO) > 0) {
+                            totalDiscountAmount = actualDiscount.getFixedValue();
+                            log.info("Calculated fixed discount amount {} for responsible {} from policy: {}",
+                                    CURRENCY_FORMATTER.format(totalDiscountAmount), responsible.getName(), actualDiscount.getDescription());
+                        } else if (actualDiscount.getPercentage() != null && actualDiscount.getPercentage().compareTo(BigDecimal.ZERO) > 0) {
+                            // invoice.getOriginalAmount() here is still the gross sum of MENSALIDADE items.
+                            BigDecimal grossAmountForDiscountCalc = invoice.getOriginalAmount();
+                            totalDiscountAmount = grossAmountForDiscountCalc.multiply(actualDiscount.getPercentage().divide(BigDecimal.valueOf(100)));
+                            log.info("Calculated percentage discount amount {} ({}%) for responsible {} on gross amount {} from policy: {}",
+                                    CURRENCY_FORMATTER.format(totalDiscountAmount), actualDiscount.getPercentage(), responsible.getName(),
+                                    CURRENCY_FORMATTER.format(grossAmountForDiscountCalc), actualDiscount.getDescription());
+                        }
+
+                        if (totalDiscountAmount.compareTo(BigDecimal.ZERO) > 0) {
+                            InvoiceItem discountItem = InvoiceItem.builder()
+                                    .type(Types.DESCONTO)
+                                    .description(actualDiscount.getName() != null && !actualDiscount.getName().isBlank() ? actualDiscount.getName() : actualDiscount.getDescription())
+                                    .amount(totalDiscountAmount.negate()) // Negative amount for discount
+                                    .enrollment(null) // Discount item is not tied to a specific enrollment
+                                    .build();
+                            invoice.addItem(discountItem); // Add the discount item to the invoice
+                            log.info("Added itemized discount '{}' of {} to invoice for responsible {}",
+                                    discountItem.getDescription(), CURRENCY_FORMATTER.format(discountItem.getAmount()), responsible.getName());
+                            
+                            // Update originalAmount to reflect NET amount after discount item is added.
+                            invoice.updateOriginalAmount(); 
+                            log.info("Invoice amount for responsible {} (ID: {}) updated to NET {} after itemized discount.",
+                                    responsible.getName(), invoice.getId(), CURRENCY_FORMATTER.format(invoice.getOriginalAmount()));
+                        }
+                    }
+                }
+                // If no discount was applied, invoice.getOriginalAmount() remains the gross sum of MENSALIDADE items.
+                // If a discount was applied, invoice.getOriginalAmount() is now NET.
+                // The existing totalDiscountAmount variable will be used for the separate DISCOUNT_APPLIED ledger posting (as per subtask constraints).
+
+
+                Invoice savedInvoice = invoiceRepository.save(invoice);
+                log.info("Saved invoice ID {} for responsible {}", savedInvoice.getId(), responsible.getName());
+
+                // Post the main tuition fee transaction (Net Amount)
+                // savedInvoice.getOriginalAmount() now reflects the NET amount due to the earlier call to
+                // invoice.updateOriginalAmount() after adding any itemized discounts.
+                try {
+                    ledgerService.postTransaction(
+                            savedInvoice,
+                            null, // No payment at invoice generation
+                            responsibleARAccount, // Debit A/R
+                            tuitionRevenueAccount, // Credit Tuition Revenue
+                            savedInvoice.getOriginalAmount(), // This is now the NET amount
+                            LocalDateTime.now(ZoneId.of("America/Sao_Paulo")),
+                            "Monthly invoice " + savedInvoice.getId() + " (net) generated for " + responsible.getName() + " - Ref: " + targetMonth.format(DateTimeFormatter.ofPattern("MM/yyyy")),
+                            LedgerEntryType.TUITION_FEE
+                    );
+                    log.info("Posted TUITION_FEE transaction for invoice ID {} to ledger. Net Amount: {}. Debited: {}, Credited: {}.",
+                            savedInvoice.getId(), CURRENCY_FORMATTER.format(savedInvoice.getOriginalAmount()), responsibleARAccount.getName(), tuitionRevenueAccount.getName());
+                } catch (Exception e) {
+                    log.error("Failed to post TUITION_FEE transaction for invoice ID {}: {}. Rolling back.", savedInvoice.getId(), e.getMessage(), e);
+                    throw e; // Re-throw to ensure transaction rollback
+                }
+
+                // The separate DISCOUNT_APPLIED ledger posting block has been removed.
+                // The itemized discount (negative InvoiceItem) has already adjusted the 
+                // savedInvoice.originalAmount to be net. The main TUITION_FEE posting
+                // now correctly reflects this net amount.
+
+                // Send notifications to responsibles about the new invoices.
                 // Ensure the responsible has an associated user account for notifications.
                 if (responsible.getId() == null) {
                     log.warn("Responsible ID {} (Name: {}) has no associated user account. Cannot send notification for invoice ID {}.",
-                            responsible.getId(), responsible.getName(), invoice.getId());
-                    return;
-                }
-                String userIdForNotification = responsible.getId();
+                            responsible.getId(), responsible.getName(), savedInvoice.getId());
+                    // Continue to next invoice or responsible, notification is not critical for financial transaction
+                } else {
+                    String userIdForNotification = responsible.getId();
 
-                // It's better to list student names if multiple, or use a generic message.
-                String studentNames = invoice.getItems().stream()
-                        .map(item -> item.getEnrollment().getStudent().getName())
-                        .distinct()
-                        .reduce((s1, s2) -> s1 + ", " + s2)
-                        .orElse("N/D");
+                    // It's better to list student names if multiple, or use a generic message.
+                    String studentNames = savedInvoice.getItems().stream()
+                            .map(item -> item.getEnrollment().getStudent().getName())
+                            .distinct()
+                            .reduce((s1, s2) -> s1 + ", " + s2)
+                            .orElse("N/D");
 
-                String formattedAmount = CURRENCY_FORMATTER.format(invoice.getOriginalAmount()); // Amount is calculated by PrePersist/PreUpdate
-                String formattedDueDate = invoice.getDueDate().format(DATE_FORMATTER);
+                    String formattedAmount = CURRENCY_FORMATTER.format(savedInvoice.getOriginalAmount());
+                    String formattedDueDate = savedInvoice.getDueDate().format(DATE_FORMATTER);
 
-                String notificationMessage = String.format(
-                        "Nova fatura de mensalidade (Ref: %s) gerada para %s no valor de %s, com vencimento em %s.",
-                        targetMonth.format(DateTimeFormatter.ofPattern("MM/yyyy")),
-                        studentNames,
-                        formattedAmount,
-                        formattedDueDate
-                );
-                String notificationLink = "/invoices/" + invoice.getId(); // Frontend link to view the invoice.
-                String notificationType = "NEW_MONTHLY_INVOICE";
-
-                try {
-                    createNotification.execute(
-                            userIdForNotification,
-                            notificationMessage,
-                            notificationLink,
-                            notificationType
+                    String notificationMessage = String.format(
+                            "Nova fatura de mensalidade (Ref: %s) gerada para %s no valor de %s, com vencimento em %s.",
+                            targetMonth.format(DateTimeFormatter.ofPattern("MM/yyyy")),
+                            studentNames,
+                            formattedAmount,
+                            formattedDueDate
                     );
-                    log.info("Notification for new invoice ID {} sent to user ID {}.", invoice.getId(), userIdForNotification);
-                } catch (Exception e) {
-                    log.error("Failed to send notification for invoice ID {} to user ID {}: {}", invoice.getId(), userIdForNotification, e.getMessage(), e);
-                    // Decide if failure to notify should impact the transaction (typically not).
+                    String notificationLink = "/invoices/" + savedInvoice.getId(); // Frontend link to view the invoice.
+                    String notificationType = "NEW_MONTHLY_INVOICE";
+
+                    try {
+                        createNotification.execute(
+                                userIdForNotification,
+                                notificationMessage,
+                                notificationLink,
+                                notificationType
+                        );
+                        log.info("Notification for new invoice ID {} sent to user ID {}.", savedInvoice.getId(), userIdForNotification);
+                    } catch (Exception e) {
+                        log.error("Failed to send notification for invoice ID {} to user ID {}: {}", savedInvoice.getId(), userIdForNotification, e.getMessage(), e);
+                        // Decide if failure to notify should impact the transaction (typically not).
+                    }
                 }
-            });
+            }
+            log.info("{} monthly invoices processed and ledger entries posted for month {}.", invoicesByResponsibleId.size(), targetMonth);
         } else {
             log.info("No new monthly invoices generated for month {}.", targetMonth);
         }
