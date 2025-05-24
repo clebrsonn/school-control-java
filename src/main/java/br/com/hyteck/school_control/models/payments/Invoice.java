@@ -115,15 +115,6 @@ public class Invoice extends AbstractModel {
     private List<Discount> discounts = new ArrayList<>();
 
     /**
-     * @deprecated Penalties are now applied as ledger entries. This field may be removed in future versions.
-     *             The financial impact of penalties is recorded in the {@link br.com.hyteck.school_control.models.financial.LedgerEntry} table.
-     */
-    @Deprecated(since = "2.0.0", forRemoval = true)
-    @Column(name = "penalty", precision = 10, scale = 2)
-    @Builder.Default
-    private BigDecimal penalty = BigDecimal.ZERO;
-
-    /**
      * The responsible party to whom this invoice is issued.
      */
     @ManyToOne

@@ -2,10 +2,10 @@ package br.com.hyteck.school_control.web.controllers;
 
 import br.com.hyteck.school_control.models.payments.InvoiceStatus;
 import br.com.hyteck.school_control.services.InvoiceCalculationService;
-import br.com.hyteck.school_control.usecases.billing.CountInvoicesByStatus;
-import br.com.hyteck.school_control.usecases.billing.GenerateConsolidatedStatementUseCase;
-import br.com.hyteck.school_control.usecases.billing.GenerateInvoicesForParents;
+import br.com.hyteck.school_control.usecases.billing.*;
 import br.com.hyteck.school_control.web.dtos.billing.ConsolidatedStatement;
+import br.com.hyteck.school_control.web.dtos.billing.InvoiceDetailDto;
+import br.com.hyteck.school_control.web.dtos.billing.InvoiceStatusSummaryDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -40,6 +40,8 @@ public class BillingController {
     private final GenerateInvoicesForParents generateInvoicesForParents;
     private final CountInvoicesByStatus countInvoicesByStatus;
     private final InvoiceCalculationService invoiceCalculationService;
+    private final GetInvoiceStatusSummaryUseCase getInvoiceStatusSummaryUseCase;
+    private final GetInvoiceDetailsUseCase getInvoiceDetailsUseCase;
 
     /**
      * Retrieves the consolidated financial statement for a specific responsible person for a given month.
@@ -135,11 +137,84 @@ public class BillingController {
         return ResponseEntity.ok(total);
     }
 
+    /**
+     * Retrieves an overall summary of invoices, including pending and overdue counts and balances.
+     * This endpoint is restricted to users with the 'ADMIN' role.
+     *
+     * @return A {@link ResponseEntity} containing the {@link InvoiceStatusSummaryDto} with overall summary details.
+     */
+    @GetMapping("/invoices/summary/overall")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Get Overall Invoice Summary",
+            description = "Provides a summary of all invoices, focusing on pending and overdue invoices, including their counts, total balances, and lists of basic invoice information. Paid invoice statistics in the DTO will be zero/empty for this endpoint.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Overall invoice summary retrieved successfully.",
+                            content = @Content(schema = @Schema(implementation = InvoiceStatusSummaryDto.class))),
+                    @ApiResponse(responseCode = "403", description = "Forbidden if user does not have ADMIN role.")
+            })
+    public ResponseEntity<InvoiceStatusSummaryDto> getOverallInvoiceSummary() {
+        InvoiceStatusSummaryDto summary = getInvoiceStatusSummaryUseCase.executeOverallSummary();
+        return ResponseEntity.ok(summary);
+    }
+
+    /**
+     * Retrieves a summary of paid invoices for a specific month, detailing counts of invoices paid on time versus late.
+     * This endpoint is restricted to users with the 'ADMIN' role.
+     *
+     * @param yearMonth The year and month (format: yyyy-MM) for which to retrieve the paid invoice summary.
+     * @return A {@link ResponseEntity} containing the {@link InvoiceStatusSummaryDto} with paid summary details.
+     */
+    @GetMapping("/invoices/summary/paid/{yearMonth}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Get Paid Invoice Summary for a Period",
+            description = "Provides a summary of paid invoices for the specified month, including counts of invoices paid on time and paid late. Pending/Overdue statistics in the DTO will be zero/empty for this endpoint.",
+            parameters = {
+                    @Parameter(name = "yearMonth", description = "The period (YearMonth) for the paid summary, in yyyy-MM format.", example = "2025-07")
+            },
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Paid invoice summary retrieved successfully.",
+                            content = @Content(schema = @Schema(implementation = InvoiceStatusSummaryDto.class))),
+                    @ApiResponse(responseCode = "400", description = "Invalid yearMonth format."),
+                    @ApiResponse(responseCode = "403", description = "Forbidden if user does not have ADMIN role.")
+            })
+    public ResponseEntity<InvoiceStatusSummaryDto> getPaidInvoiceSummaryForPeriod(
+            @PathVariable @DateTimeFormat(pattern = "yyyy-MM") YearMonth yearMonth) {
+        InvoiceStatusSummaryDto summary = getInvoiceStatusSummaryUseCase.executePaidInvoiceSummaryForPeriod(yearMonth);
+        return ResponseEntity.ok(summary);
+    }
+
 
     // --- Endpoint para Processar Pagamento Consolidado (Exemplo de Webhook) ---
     // Este endpoint seria chamado pelo seu gateway de pagamento após a confirmação
     /*
     @PostMapping("/payments/consolidated/webhook")
+    */
+
+    /**
+     * Retrieves the detailed information for a single invoice by its ID.
+     * This includes financial summaries derived from ledger entries.
+     *
+     * @param invoiceId The ID of the invoice to retrieve.
+     * @return A {@link ResponseEntity} containing the {@link InvoiceDetailDto} if found, or 404 Not Found.
+     */
+    @GetMapping("/invoices/{invoiceId}")
+    @Operation(summary = "Get Invoice Details by ID",
+            description = "Fetches comprehensive details for a specific invoice, including its items, payment history, and ledger-derived financial summaries (discounts, penalties, payments, current balance).",
+            parameters = {
+                    @Parameter(name = "invoiceId", description = "The unique identifier of the invoice.", example = "inv_12345")
+            },
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Invoice details retrieved successfully.",
+                            content = @Content(schema = @Schema(implementation = InvoiceDetailDto.class))),
+                    @ApiResponse(responseCode = "404", description = "Invoice not found.")
+            })
+    public ResponseEntity<InvoiceDetailDto> getInvoiceDetails(@PathVariable String invoiceId) {
+        Optional<InvoiceDetailDto> invoiceDetailsOpt = getInvoiceDetailsUseCase.execute(invoiceId);
+        return invoiceDetailsOpt
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+}
     public ResponseEntity<Void> processConsolidatedPaymentWebhook(@RequestBody PaymentWebhookPayload payload) {
         // 1. Validar o payload do webhook (segurança é crucial aqui!)
         // 2. Extrair informações relevantes (ID da transação consolidada, valor, status)

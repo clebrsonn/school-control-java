@@ -67,4 +67,38 @@ public interface LedgerEntryRepository extends JpaRepository<LedgerEntry, String
            "FROM LedgerEntry le " +
            "WHERE le.account.id = :accountId AND le.invoice.id = :invoiceId")
     BigDecimal getBalanceForInvoiceOnAccount(@Param("accountId") String accountId, @Param("invoiceId") String invoiceId);
+
+    /**
+     * Calculates the sum of debit amounts for a specific invoice on a particular account, filtered by entry type.
+     *
+     * @param invoiceId The ID of the invoice.
+     * @param accountId The ID of the account.
+     * @param entryType The type of ledger entry (e.g., PENALTY_ASSESSED).
+     * @return The total sum of debit amounts, or BigDecimal.ZERO if none found.
+     */
+    @Query("SELECT COALESCE(SUM(le.debitAmount), 0) " +
+           "FROM LedgerEntry le " +
+           "WHERE le.invoice.id = :invoiceId AND le.account.id = :accountId AND le.type = :entryType")
+    BigDecimal sumDebitAmountByInvoiceIdAndAccountIdAndType(
+            @Param("invoiceId") String invoiceId,
+            @Param("accountId") String accountId,
+            @Param("entryType") br.com.hyteck.school_control.models.finance.LedgerEntryType entryType
+    );
+
+    /**
+     * Calculates the sum of credit amounts for a specific invoice on a particular account, filtered by entry type.
+     *
+     * @param invoiceId The ID of the invoice.
+     * @param accountId The ID of the account.
+     * @param entryType The type of ledger entry (e.g., DISCOUNT_APPLIED, PAYMENT_RECEIVED).
+     * @return The total sum of credit amounts, or BigDecimal.ZERO if none found.
+     */
+    @Query("SELECT COALESCE(SUM(le.creditAmount), 0) " +
+           "FROM LedgerEntry le " +
+           "WHERE le.invoice.id = :invoiceId AND le.account.id = :accountId AND le.type = :entryType")
+    BigDecimal sumCreditAmountByInvoiceIdAndAccountIdAndType(
+            @Param("invoiceId") String invoiceId,
+            @Param("accountId") String accountId,
+            @Param("entryType") br.com.hyteck.school_control.models.finance.LedgerEntryType entryType
+    );
 }
