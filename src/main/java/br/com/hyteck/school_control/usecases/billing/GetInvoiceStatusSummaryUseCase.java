@@ -1,14 +1,15 @@
 package br.com.hyteck.school_control.usecases.billing;
 
-import br.com.hyteck.school_control.models.finance.Account;
+import br.com.hyteck.school_control.models.financial.Account;
 import br.com.hyteck.school_control.models.payments.Invoice;
 import br.com.hyteck.school_control.models.payments.InvoiceStatus;
 import br.com.hyteck.school_control.models.payments.Payment;
 import br.com.hyteck.school_control.models.payments.Responsible;
 import br.com.hyteck.school_control.repositories.InvoiceRepository;
-import br.com.hyteck.school_control.repositories.LedgerEntryRepository;
+
 import br.com.hyteck.school_control.repositories.PaymentRepository;
-import br.com.hyteck.school_control.services.AccountService;
+import br.com.hyteck.school_control.repositories.financial.LedgerEntryRepository;
+import br.com.hyteck.school_control.services.financial.AccountService;
 import br.com.hyteck.school_control.web.dtos.billing.InvoiceBasicInfo;
 import br.com.hyteck.school_control.web.dtos.billing.InvoiceStatusSummaryDto;
 import lombok.RequiredArgsConstructor;
@@ -48,7 +49,7 @@ public class GetInvoiceStatusSummaryUseCase {
         long totalOverdueInvoices = 0;
 
         // Process PENDING invoices
-        List<Invoice> pendingInvoices = invoiceRepository.findByStatus(InvoiceStatus.PENDING);
+        List<Invoice> pendingInvoices = invoiceRepository.findByStatusAndDueDateBefore(InvoiceStatus.PENDING,LocalDate.now());
         log.info("Found {} PENDING invoices.", pendingInvoices.size());
         for (Invoice invoice : pendingInvoices) {
             InvoiceBasicInfo basicInfo = createInvoiceBasicInfo(invoice);
@@ -62,7 +63,7 @@ public class GetInvoiceStatusSummaryUseCase {
         // Process OVERDUE invoices
         // Assuming OVERDUE status is correctly set by another process.
         // If not, this might need to fetch PENDING invoices past their due date.
-        List<Invoice> overdueInvoices = invoiceRepository.findByStatus(InvoiceStatus.OVERDUE);
+        List<Invoice> overdueInvoices = invoiceRepository.findByStatusAndDueDateBefore(InvoiceStatus.OVERDUE, LocalDate.now());
         log.info("Found {} OVERDUE invoices.", overdueInvoices.size());
         for (Invoice invoice : overdueInvoices) {
             InvoiceBasicInfo basicInfo = createInvoiceBasicInfo(invoice);
@@ -147,7 +148,6 @@ public class GetInvoiceStatusSummaryUseCase {
                 .overdueInvoicesList(List.of())
                 .build();
     }
-
 
     private InvoiceBasicInfo createInvoiceBasicInfo(Invoice invoice) {
         Responsible responsible = invoice.getResponsible();

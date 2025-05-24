@@ -1,13 +1,13 @@
 package br.com.hyteck.school_control.usecases.billing;
 
 import br.com.hyteck.school_control.models.classrooms.Enrollment;
+import br.com.hyteck.school_control.models.financial.Account;
 import br.com.hyteck.school_control.models.payments.Invoice;
 import br.com.hyteck.school_control.models.payments.InvoiceItem;
-import br.com.hyteck.school_control.models.finance.Account;
 import br.com.hyteck.school_control.models.payments.*;
 import br.com.hyteck.school_control.repositories.InvoiceRepository;
-import br.com.hyteck.school_control.repositories.LedgerEntryRepository;
-import br.com.hyteck.school_control.services.AccountService;
+import br.com.hyteck.school_control.repositories.financial.LedgerEntryRepository;
+import br.com.hyteck.school_control.services.financial.AccountService;
 import br.com.hyteck.school_control.web.dtos.billing.OverduePayment;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 

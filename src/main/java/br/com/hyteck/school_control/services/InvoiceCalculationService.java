@@ -1,11 +1,12 @@
 package br.com.hyteck.school_control.services;
 
-import br.com.hyteck.school_control.models.finance.Account;
+import br.com.hyteck.school_control.models.financial.Account;
 import br.com.hyteck.school_control.models.payments.Invoice;
 import br.com.hyteck.school_control.models.payments.InvoiceStatus;
 import br.com.hyteck.school_control.models.payments.Responsible;
 import br.com.hyteck.school_control.repositories.InvoiceRepository;
-import br.com.hyteck.school_control.repositories.LedgerEntryRepository;
+import br.com.hyteck.school_control.repositories.financial.LedgerEntryRepository;
+import br.com.hyteck.school_control.services.financial.AccountService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;

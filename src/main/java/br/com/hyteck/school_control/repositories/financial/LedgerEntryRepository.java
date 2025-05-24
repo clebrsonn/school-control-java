@@ -2,6 +2,7 @@ package br.com.hyteck.school_control.repositories.financial;
 
 import br.com.hyteck.school_control.models.financial.Account;
 import br.com.hyteck.school_control.models.financial.LedgerEntry;
+import br.com.hyteck.school_control.models.financial.LedgerEntryType;
 import br.com.hyteck.school_control.models.payments.Invoice;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -82,7 +83,7 @@ public interface LedgerEntryRepository extends JpaRepository<LedgerEntry, String
     BigDecimal sumDebitAmountByInvoiceIdAndAccountIdAndType(
             @Param("invoiceId") String invoiceId,
             @Param("accountId") String accountId,
-            @Param("entryType") br.com.hyteck.school_control.models.finance.LedgerEntryType entryType
+            @Param("entryType") LedgerEntryType entryType
     );
 
     /**
@@ -99,6 +100,6 @@ public interface LedgerEntryRepository extends JpaRepository<LedgerEntry, String
     BigDecimal sumCreditAmountByInvoiceIdAndAccountIdAndType(
             @Param("invoiceId") String invoiceId,
             @Param("accountId") String accountId,
-            @Param("entryType") br.com.hyteck.school_control.models.finance.LedgerEntryType entryType
+            @Param("entryType") LedgerEntryType entryType
     );
 }

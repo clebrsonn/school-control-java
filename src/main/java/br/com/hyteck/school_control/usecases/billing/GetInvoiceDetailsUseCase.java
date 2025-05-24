@@ -1,15 +1,15 @@
 package br.com.hyteck.school_control.usecases.billing;
 
-import br.com.hyteck.school_control.models.finance.Account;
-import br.com.hyteck.school_control.models.finance.LedgerEntryType;
+import br.com.hyteck.school_control.models.financial.Account;
+import br.com.hyteck.school_control.models.financial.LedgerEntryType;
 import br.com.hyteck.school_control.models.payments.Invoice;
 import br.com.hyteck.school_control.models.payments.InvoiceItem;
 import br.com.hyteck.school_control.models.payments.Payment;
 import br.com.hyteck.school_control.models.payments.Responsible;
 import br.com.hyteck.school_control.repositories.InvoiceRepository;
-import br.com.hyteck.school_control.repositories.LedgerEntryRepository;
 import br.com.hyteck.school_control.repositories.PaymentRepository;
-import br.com.hyteck.school_control.services.AccountService;
+import br.com.hyteck.school_control.repositories.financial.LedgerEntryRepository;
+import br.com.hyteck.school_control.services.financial.AccountService;
 import br.com.hyteck.school_control.web.dtos.billing.InvoiceDetailDto;
 import br.com.hyteck.school_control.web.dtos.billing.InvoiceItemDetailDto;
 import br.com.hyteck.school_control.web.dtos.payments.PaymentResponse;
@@ -111,7 +111,7 @@ public class GetInvoiceDetailsUseCase {
                 .issueDate(invoice.getIssueDate())
                 .dueDate(invoice.getDueDate())
                 .status(invoice.getStatus())
-                .originalAmount(invoice.getOriginalAmount()) // This is the NET amount from Invoice items
+                .originalAmount(invoice.getAmount()) // This is the NET amount from Invoice items
                 .totalAdHocDiscountsApplied(totalAdHocDiscountsApplied)
                 .totalPenaltiesAssessed(totalPenaltiesAssessed)
                 .totalPaymentsReceived(totalPaymentsReceived)

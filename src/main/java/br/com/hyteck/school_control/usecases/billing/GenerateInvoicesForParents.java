@@ -1,15 +1,15 @@
 package br.com.hyteck.school_control.usecases.billing;
 
 import br.com.hyteck.school_control.models.classrooms.Enrollment;
-import br.com.hyteck.school_control.models.finance.Account;
-import br.com.hyteck.school_control.models.finance.AccountType;
-import br.com.hyteck.school_control.models.finance.LedgerEntryType;
+import br.com.hyteck.school_control.models.financial.Account;
+import br.com.hyteck.school_control.models.financial.AccountType;
+import br.com.hyteck.school_control.models.financial.LedgerEntryType;
 import br.com.hyteck.school_control.models.payments.*;
 import br.com.hyteck.school_control.repositories.DiscountRepository;
 import br.com.hyteck.school_control.repositories.EnrollmentRepository;
 import br.com.hyteck.school_control.repositories.InvoiceRepository;
-import br.com.hyteck.school_control.services.AccountService;
-import br.com.hyteck.school_control.services.LedgerService;
+import br.com.hyteck.school_control.services.financial.AccountService;
+import br.com.hyteck.school_control.services.financial.LedgerService;
 import br.com.hyteck.school_control.usecases.notification.CreateNotification;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -138,7 +138,7 @@ public class GenerateInvoicesForParents {
             monthlyInvoice.addItem(monthlyFeeItem);
             // The amount is recalculated via @PrePersist/@PreUpdate in Invoice entity,
             // but we can call it here if we need the updated amount immediately.
-            monthlyInvoice.updateOriginalAmount(); // Explicitly calculate original amount
+            monthlyInvoice.calculateAmount(); // Explicitly calculate original amount
         }
 
         // Save all created or updated invoices and post ledger transactions.
@@ -161,8 +161,6 @@ public class GenerateInvoicesForParents {
                 // For this example, we'll use the previously fetched monthlyFeeDiscount if more than one item exists.
                 BigDecimal totalDiscountAmount = BigDecimal.ZERO;
                 if (invoice.getItems().size() > 1) { // Condition for applying discount
-                    Optional<Discount> discountToApply = discountRepository.findByTypeAndValidAtBeforeToday(Types.MENSALIDADE);
-                    if (discountToApply.isPresent()) {
                         // This is a placeholder for actual discount calculation logic.
                         // Assuming discount is a fixed amount or percentage of the first item, etc.
                         // For simplicity, let's say it's a fixed amount per additional student.
@@ -181,19 +179,12 @@ public class GenerateInvoicesForParents {
                         // we apply its fixedValue if not null, otherwise percentage of the originalAmount.
                         // This is a placeholder for potentially complex discount rules.
 
-                        Discount actualDiscount = discountToApply.get();
+                        Discount actualDiscount = monthlyFeeDiscount.get();
                         // The variable totalDiscountAmount will still be used for the separate ledger posting in this subtask.
-                        if (actualDiscount.getFixedValue() != null && actualDiscount.getFixedValue().compareTo(BigDecimal.ZERO) > 0) {
-                            totalDiscountAmount = actualDiscount.getFixedValue();
+                        if (actualDiscount.getValue() != null && actualDiscount.getValue().compareTo(BigDecimal.ZERO) > 0) {
+                            totalDiscountAmount = actualDiscount.getValue();
                             log.info("Calculated fixed discount amount {} for responsible {} from policy: {}",
                                     CURRENCY_FORMATTER.format(totalDiscountAmount), responsible.getName(), actualDiscount.getDescription());
-                        } else if (actualDiscount.getPercentage() != null && actualDiscount.getPercentage().compareTo(BigDecimal.ZERO) > 0) {
-                            // invoice.getOriginalAmount() here is still the gross sum of MENSALIDADE items.
-                            BigDecimal grossAmountForDiscountCalc = invoice.getOriginalAmount();
-                            totalDiscountAmount = grossAmountForDiscountCalc.multiply(actualDiscount.getPercentage().divide(BigDecimal.valueOf(100)));
-                            log.info("Calculated percentage discount amount {} ({}%) for responsible {} on gross amount {} from policy: {}",
-                                    CURRENCY_FORMATTER.format(totalDiscountAmount), actualDiscount.getPercentage(), responsible.getName(),
-                                    CURRENCY_FORMATTER.format(grossAmountForDiscountCalc), actualDiscount.getDescription());
                         }
 
                         if (totalDiscountAmount.compareTo(BigDecimal.ZERO) > 0) {
@@ -208,11 +199,10 @@ public class GenerateInvoicesForParents {
                                     discountItem.getDescription(), CURRENCY_FORMATTER.format(discountItem.getAmount()), responsible.getName());
                             
                             // Update originalAmount to reflect NET amount after discount item is added.
-                            invoice.updateOriginalAmount(); 
+                            invoice.calculateAmount();
                             log.info("Invoice amount for responsible {} (ID: {}) updated to NET {} after itemized discount.",
-                                    responsible.getName(), invoice.getId(), CURRENCY_FORMATTER.format(invoice.getOriginalAmount()));
+                                    responsible.getName(), invoice.getId(), CURRENCY_FORMATTER.format(invoice.calculateAmount()));
                         }
-                    }
                 }
                 // If no discount was applied, invoice.getOriginalAmount() remains the gross sum of MENSALIDADE items.
                 // If a discount was applied, invoice.getOriginalAmount() is now NET.
@@ -231,13 +221,13 @@ public class GenerateInvoicesForParents {
                             null, // No payment at invoice generation
                             responsibleARAccount, // Debit A/R
                             tuitionRevenueAccount, // Credit Tuition Revenue
-                            savedInvoice.getOriginalAmount(), // This is now the NET amount
+                            savedInvoice.calculateAmount(), // This is now the NET amount
                             LocalDateTime.now(ZoneId.of("America/Sao_Paulo")),
                             "Monthly invoice " + savedInvoice.getId() + " (net) generated for " + responsible.getName() + " - Ref: " + targetMonth.format(DateTimeFormatter.ofPattern("MM/yyyy")),
                             LedgerEntryType.TUITION_FEE
                     );
                     log.info("Posted TUITION_FEE transaction for invoice ID {} to ledger. Net Amount: {}. Debited: {}, Credited: {}.",
-                            savedInvoice.getId(), CURRENCY_FORMATTER.format(savedInvoice.getOriginalAmount()), responsibleARAccount.getName(), tuitionRevenueAccount.getName());
+                            savedInvoice.getId(), CURRENCY_FORMATTER.format(savedInvoice.calculateAmount()), responsibleARAccount.getName(), tuitionRevenueAccount.getName());
                 } catch (Exception e) {
                     log.error("Failed to post TUITION_FEE transaction for invoice ID {}: {}. Rolling back.", savedInvoice.getId(), e.getMessage(), e);
                     throw e; // Re-throw to ensure transaction rollback
@@ -264,7 +254,7 @@ public class GenerateInvoicesForParents {
                             .reduce((s1, s2) -> s1 + ", " + s2)
                             .orElse("N/D");
 
-                    String formattedAmount = CURRENCY_FORMATTER.format(savedInvoice.getOriginalAmount());
+                    String formattedAmount = CURRENCY_FORMATTER.format(savedInvoice.calculateAmount());
                     String formattedDueDate = savedInvoice.getDueDate().format(DATE_FORMATTER);
 
                     String notificationMessage = String.format(

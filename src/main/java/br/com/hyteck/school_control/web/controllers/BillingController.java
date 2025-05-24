@@ -183,13 +183,6 @@ public class BillingController {
         return ResponseEntity.ok(summary);
     }
 
-
-    // --- Endpoint para Processar Pagamento Consolidado (Exemplo de Webhook) ---
-    // Este endpoint seria chamado pelo seu gateway de pagamento após a confirmação
-    /*
-    @PostMapping("/payments/consolidated/webhook")
-    */
-
     /**
      * Retrieves the detailed information for a single invoice by its ID.
      * This includes financial summaries derived from ledger entries.
@@ -214,7 +207,11 @@ public class BillingController {
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
-}
+
+    // --- Endpoint para Processar Pagamento Consolidado (Exemplo de Webhook) ---
+    // Este endpoint seria chamado pelo seu gateway de pagamento após a confirmação
+    /*
+    @PostMapping("/payments/consolidated/webhook")
     public ResponseEntity<Void> processConsolidatedPaymentWebhook(@RequestBody PaymentWebhookPayload payload) {
         // 1. Validar o payload do webhook (segurança é crucial aqui!)
         // 2. Extrair informações relevantes (ID da transação consolidada, valor, status)
@@ -232,5 +229,4 @@ public class BillingController {
         }
     }
     */
-
 }
