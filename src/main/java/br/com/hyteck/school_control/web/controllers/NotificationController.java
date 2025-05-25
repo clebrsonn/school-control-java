@@ -58,7 +58,7 @@ public class NotificationController {
     /**
      * Get all notifications for the current user
      *
-     * @returns Page of notifications
+     * @return Page of notifications
      */
     @GetMapping
     @Operation(summary = "Listar notificações do usuário autenticado",
@@ -75,7 +75,7 @@ public class NotificationController {
     /**
      * Get unread notifications count for the current user
      *
-     * @returns Number of unread notifications
+     * @return Number of unread notifications
      */
     @GetMapping("/unread/count")
     @Operation(summary = "Contar notificações não lidas",
@@ -91,7 +91,7 @@ public class NotificationController {
      * Mark a notification as read
      *
      * @param id Notification ID
-     * @returns Updated notification
+     * @return Updated notification
      */
     @PutMapping("/{id}/read")
     @Operation(summary = "Marcar uma notificação como lida",
@@ -108,7 +108,7 @@ public class NotificationController {
     /**
      * Mark all notifications as read
      *
-     * @returns Success message or count
+     * @return Success message or count
      */
     @PostMapping("/read-all") // Usando POST conforme frontend, mas PUT também seria semanticamente aceitável
     @Operation(summary = "Marcar todas as notificações como lidas",

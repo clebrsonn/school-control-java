@@ -8,7 +8,20 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * DTO para retornar dados de um usuário. NÃO inclui a senha.
+ * Data Transfer Object (DTO) for returning user data to clients.
+ * This DTO provides a representation of a user's details, excluding sensitive
+ * information like the password.
+ *
+ * @param id                    The unique identifier of the user.
+ * @param username              The username of the user.
+ * @param email                 The email address of the user.
+ * @param roles                 A set of role names assigned to the user (e.g., "ROLE_USER", "ROLE_ADMIN").
+ * @param enabled               Indicates whether the user's account is enabled.
+ * @param accountNonLocked      Indicates whether the user's account is not locked.
+ * @param accountNonExpired     Indicates whether the user's account has not expired.
+ * @param credentialsNonExpired Indicates whether the user's credentials (password) have not expired.
+ * @param createdAt             The timestamp when the user account was created.
+ * @param updatedAt             The timestamp when the user account was last updated.
  */
 public record UserResponse(
         String id,
@@ -22,21 +35,32 @@ public record UserResponse(
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
+    /**
+     * Static factory method to create a {@link UserResponse} from a {@link User} entity.
+     * This method performs the mapping from the domain model to the DTO.
+     *
+     * @param user The {@link User} entity to convert.
+     * @return A {@link UserResponse} populated with data from the User entity, or {@code null} if the input user is {@code null}.
+     */
     public static UserResponse from(User user) {
+        // Return null if the source User entity is null to prevent NullPointerExceptions.
         if (user == null) {
             return null;
         }
+        // Create and return a new UserResponse, mapping fields from the User entity.
         return new UserResponse(
-                user.getId(),
-                user.getUsername(),
-                user.getEmail(),
-                user.getRoles().stream().map(Role::getName).collect(Collectors.toSet()), // Mapeia roles para nomes
-                user.isEnabled(),
-                user.isAccountNonLocked(),
-                user.isAccountNonExpired(),
-                user.isCredentialsNonExpired(),
-                user.getCreatedAt(),
-                user.getUpdatedAt()
+                user.getId(), // User's unique ID.
+                user.getUsername(), // Username.
+                user.getEmail(), // Email address.
+                user.getRoles().stream() // Stream over the Set<Role>
+                        .map(Role::getName) // Map each Role object to its name (String).
+                        .collect(Collectors.toSet()), // Collect the role names into a Set<String>.
+                user.isEnabled(), // Account enabled status.
+                user.isAccountNonLocked(), // Account locked status.
+                user.isAccountNonExpired(), // Account expiration status.
+                user.isCredentialsNonExpired(), // Credentials expiration status.
+                user.getCreatedAt(), // Timestamp of account creation.
+                user.getUpdatedAt() // Timestamp of last account update.
         );
     }
 }

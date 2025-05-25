@@ -1,16 +1,16 @@
 package br.com.hyteck.school_control.web.controllers;
 
-import br.com.hyteck.school_control.usecases.user.*; // Importar use cases
+import br.com.hyteck.school_control.usecases.user.*;
 import br.com.hyteck.school_control.web.dtos.user.UserRequest;
 import br.com.hyteck.school_control.web.dtos.user.UserResponse;
 import jakarta.validation.Valid;
+import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize; // Para segurança baseada em método (opcional)
-import org.springframework.security.core.Authentication;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +21,7 @@ import java.net.URI;
 @RestController
 @RequestMapping("/users") // Endpoint base para usuários
 //@PreAuthorize("hasRole('ADMIN')") // Pode proteger a classe inteira se só ADMIN mexe
+@AllArgsConstructor
 public class UserController {
 
     private final br.com.hyteck.school_control.usecases.user.CreateUser createUser;
@@ -29,15 +30,6 @@ public class UserController {
     private final FindUsers findAllUsers;
     private final UpdateUser updateUser;
     private final DeleteUser deleteUser;
-
-    public UserController(CreateUser createUser, FindUserById findUserById, FindUsername findUsername, FindUsers findAllUsers, UpdateUser updateUser, DeleteUser deleteUser) {
-        this.createUser = createUser;
-        this.findUserById = findUserById;
-        this.findUsername = findUsername;
-        this.findAllUsers = findAllUsers;
-        this.updateUser = updateUser;
-        this.deleteUser = deleteUser;
-    }
 
     @PostMapping
     public ResponseEntity<UserResponse> createUser(@Valid @RequestBody UserRequest requestDTO) {

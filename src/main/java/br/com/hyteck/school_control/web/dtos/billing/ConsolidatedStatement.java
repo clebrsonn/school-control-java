@@ -8,17 +8,23 @@ import java.util.List;
 // ao criar a instância ou no construtor compacto.
 
 /**
- * Record representando o extrato/boleto consolidado para um responsável.
- * É imutável por natureza.
+ * Represents a consolidated financial statement for a responsible party for a specific reference month.
+ * This record is designed to be immutable. It aggregates multiple individual invoice items
+ * into a single statement with a total amount due and an overall due date.
  *
- * @param responsibleId    ID do responsável.
- * @param responsibleName  Nome do responsável.
- * @param referenceMonth   Mês/Ano de referência do extrato.
- * @param totalAmountDue   Soma dos valores das faturas individuais incluídas.
- * @param overallDueDate   Data de vencimento geral para o pagamento consolidado.
- * @param items            Lista dos detalhes das faturas individuais (StatementLineItemDTO).
- * @param paymentLink      Opcional: Link para gateway de pagamento.
- * @param barcode          Opcional: Código de barras para boleto único.
+ * Note on list immutability: While records provide shallow immutability, the {@code items} list,
+ * if mutable, could be modified externally after the record's creation. To ensure deep
+ * immutability, consider using {@code List.copyOf(items)} in a compact constructor or ensuring
+ * that an immutable list is passed during instantiation.
+ *
+ * @param responsibleId    The unique identifier of the responsible party.
+ * @param responsibleName  The name of the responsible party.
+ * @param referenceMonth   The year and month to which this consolidated statement pertains.
+ * @param totalAmountDue   The total sum of all individual invoice items included in this statement.
+ * @param overallDueDate   The single due date for the payment of the total amount.
+ * @param items            A list of {@link StatementLineItem} objects, detailing individual charges or invoices.
+ * @param paymentLink      An optional URL or link that directs the user to a payment gateway for this statement.
+ * @param barcode          An optional barcode string, typically for generating a printable bill (boleto in Brazil).
  */
 public record ConsolidatedStatement(
         String responsibleId,
@@ -26,24 +32,26 @@ public record ConsolidatedStatement(
         YearMonth referenceMonth,
         BigDecimal totalAmountDue,
         LocalDate overallDueDate,
-        List<StatementLineItem> items, // A lista em si pode ser mutável! Veja nota.
+        List<StatementLineItem> items,
         String paymentLink,
         String barcode
-        // Adicionar outros campos conforme necessário
 ) {
-    // O compilador gera automaticamente construtor, accessors, equals/hashCode/toString.
-
-    // Nota sobre a lista 'items':
-    // O record garante que a *referência* à lista 'items' não pode ser alterada
-    // após a criação do objeto ConsolidatedStatementDTO. No entanto, se a lista
-    // passada para o construtor for mutável, seu conteúdo *interno* ainda
-    // poderia ser modificado externamente.
-    // Para imutabilidade real, você pode usar um construtor compacto:
-    /*
-    public ConsolidatedStatementDTO { // Construtor compacto
-        // Cria uma cópia imutável da lista recebida
-        this.items = List.copyOf(items);
+    /**
+     * Compact constructor for {@link ConsolidatedStatement}.
+     * This constructor ensures that the provided list of items is stored as an immutable list
+     * internally, protecting against external modifications after the record is created.
+     *
+     * @param responsibleId    The unique identifier of the responsible party.
+     * @param responsibleName  The name of the responsible party.
+     * @param referenceMonth   The year and month to which this consolidated statement pertains.
+     * @param totalAmountDue   The total sum of all individual invoice items included in this statement.
+     * @param overallDueDate   The single due date for the payment of the total amount.
+     * @param items            A list of {@link StatementLineItem} objects, detailing individual charges or invoices.
+     *                         This list will be copied into an immutable list.
+     * @param paymentLink      An optional URL or link that directs the user to a payment gateway for this statement.
+     * @param barcode          An optional barcode string, typically for generating a printable bill (boleto in Brazil).
+     */
+    public ConsolidatedStatement {
+        items = (items == null) ? List.of() : List.copyOf(items);
     }
-    */
-    // Ou garantir que a lista passada durante a criação já seja imutável.
 }

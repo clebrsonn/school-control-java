@@ -58,6 +58,10 @@ public class Enrollment extends AbstractModel {
         }
     }
 
+    /**
+     *
+     * @param enrollmentRepository
+     */
     public void validateEnrollmentRules(EnrollmentRepository enrollmentRepository) {
         // a) Verificar se já existe matrícula do estudante NESSA turma
         if (enrollmentRepository.existsByStudentIdAndClassroomId(student.getId(), classroom.getId())) {

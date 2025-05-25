@@ -18,6 +18,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
+import java.math.BigDecimal;
+
 /**
  * Service responsible for creating a new student entity.
  * Validates for duplicates, associates the responsible, persists the student, and creates the enrollment.
@@ -32,9 +34,10 @@ public class CreateStudent {
     private final ResponsibleRepository responsibleRepository;
     private final CreateEnrollment createEnrollment;
 
-
     /**
-     * Creates a new student and associates it with a responsible and enrollment.
+     * Creates a new student, associates them with a responsible party, and enrolls them in a class.
+     * It first validates if a responsible exists by ID or phone number.
+     * Then, it builds and saves the new student. Finally, it creates an enrollment for the student.
      *
      * @param requestDTO the student data to create
      * @return the created student response DTO
@@ -45,39 +48,64 @@ public class CreateStudent {
     public StudentResponse execute(@Valid StudentRequest requestDTO) {
         logger.info("Starting student creation: {}", requestDTO.name());
 
-        // 1. Verificar duplicados (CPF y Email son buenos candidatos)
+        // Commented out duplicate checks for CPF and Email.
+        // These can be re-enabled if strict uniqueness is required before database constraints.
 //        if (studentRepository.existsByCpf(requestDTO.cpf())) {
 //            throw new DuplicateResourceException("Já existe um estudante com o CPF: " + requestDTO.cpf());
 //        }
 //        if (studentRepository.existsByEmail(requestDTO.email())) {
 //            throw new DuplicateResourceException("Já existe um estudante com o email: " + requestDTO.email());
 //        }
+
         Responsible responsible;
+        // Determine how to find the responsible: by ID if provided, otherwise by phone number.
         if (requestDTO.responsibleId() == null) {
+            logger.debug("Attempting to find responsible by phone: {}", requestDTO.responsiblePhone());
             responsible = responsibleRepository.findByPhone(requestDTO.responsiblePhone()).orElseThrow(
-                    () -> new ResourceNotFoundException(
-                            "Responsável não encontrado: " + requestDTO.responsiblePhone()
-                    )
+                    () -> {
+                        logger.error("Responsible not found with phone: {}", requestDTO.responsiblePhone());
+                        return new ResourceNotFoundException(
+                                "Responsável não encontrado com o telefone: " + requestDTO.responsiblePhone()
+                        );
+                    }
             );
-
         } else {
+            logger.debug("Attempting to find responsible by ID: {}", requestDTO.responsibleId());
             responsible = responsibleRepository.findById(requestDTO.responsibleId())
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Responsável não encontrado: " + requestDTO.responsibleId()
-                    ));
+                    .orElseThrow(() -> {
+                        logger.error("Responsible not found with ID: {}", requestDTO.responsibleId());
+                        return new ResourceNotFoundException(
+                                "Responsável não encontrado com o ID: " + requestDTO.responsibleId()
+                        );
+                    });
         }
+        logger.info("Responsible found: {}", responsible.getName());
 
-
+        // Build the student entity from the request DTO and the found responsible.
         Student studentToSave = Student.builder()
                 .name(requestDTO.name())
                 .email(requestDTO.email())
                 .cpf(requestDTO.cpf())
-                .responsible(responsible)
+                .responsible(responsible) // Associate the fetched or found responsible.
                 .build();
 
+        // Persist the new student entity.
         Student savedStudent = studentRepository.save(studentToSave);
-        logger.info("Estudante '{}' criado con sucesso. ID: {}", savedStudent.getName(), savedStudent.getId());
-        createEnrollment.execute(new EnrollmentRequest(savedStudent.getId(), requestDTO.classroom(), requestDTO.className(),  requestDTO.enrollmentFee(), requestDTO.monthyFee()));
+        logger.info("Student '{}' created successfully with ID: {}", savedStudent.getName(), savedStudent.getId());
+
+        // Create an enrollment for the newly created student.
+        // This links the student to a classroom and sets up fees.
+        logger.debug("Creating enrollment for student ID: {} in classroom ID: {}", savedStudent.getId(), requestDTO.classroom());
+        createEnrollment.execute(new EnrollmentRequest(
+                savedStudent.getId(),
+                requestDTO.classroom(),
+                requestDTO.className(),
+                requestDTO.enrollmentFee()==null || BigDecimal.ZERO.compareTo(requestDTO.enrollmentFee())==0 ? BigDecimal.valueOf(30) : requestDTO.enrollmentFee(),
+                requestDTO.monthyFee()==null || BigDecimal.ZERO.compareTo(requestDTO.monthyFee())==0  ? BigDecimal.valueOf(110) : requestDTO.monthyFee()
+        ));
+        logger.info("Enrollment created for student: {}", savedStudent.getName());
+
+        // Convert the saved student entity to a response DTO.
         return StudentResponse.from(savedStudent);
     }
 }

@@ -5,5 +5,6 @@ public enum PaymentStatus {
     PENDING,    // Pagamento iniciado, aguardando confirmação
     COMPLETED,  // Pagamento confirmado com sucesso
     FAILED,     // Pagamento falhou
-    REFUNDED    // Pagamento estornado
+    REFUNDED,    // Pagamento estornado
+    PENDING_CONFIRMATION
 }

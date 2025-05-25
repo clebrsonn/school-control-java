@@ -5,6 +5,7 @@ import br.com.hyteck.school_control.models.AbstractModel;
 import br.com.hyteck.school_control.models.classrooms.Enrollment;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 
@@ -14,7 +15,7 @@ import java.math.BigDecimal;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 public class InvoiceItem extends AbstractModel {
 
     @ManyToOne(fetch = FetchType.LAZY)

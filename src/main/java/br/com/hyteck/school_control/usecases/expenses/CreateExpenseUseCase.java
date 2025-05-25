@@ -19,9 +19,14 @@ public class CreateExpenseUseCase {
     }
 
     public Expense execute(ExpenseRequest expenseRequest) {
-        String path =storageService.store(expenseRequest.receipt());
         Expense expense= ExpenseRequest.to(expenseRequest);
-        expense.setReceiptUrl(path);
+
+        if(expenseRequest.receipt() != null){
+            String path =storageService.store(expenseRequest.receipt());
+            expense.setReceiptUrl(path);
+        }
+
+
         return expenseRepository.save(expense);
     }
 }

@@ -3,6 +3,8 @@ package br.com.hyteck.school_control.repositories;
 import br.com.hyteck.school_control.models.payments.Invoice;
 import br.com.hyteck.school_control.models.payments.InvoiceStatus;
 import br.com.hyteck.school_control.models.payments.Types;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -123,4 +125,6 @@ public interface InvoiceRepository extends JpaRepository<Invoice, String> {
      * @return the count of invoices with the given status
      */
     long countByStatus(InvoiceStatus status);
+
+    Page<Invoice> findByStatusInAndDueDateBefore(Collection<InvoiceStatus> invoiceStatuses, LocalDate localDate, Pageable pageable);
 }
