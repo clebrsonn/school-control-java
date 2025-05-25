@@ -97,23 +97,6 @@ public class Invoice extends AbstractModel {
     private String description;
 
     /**
-     * List of discounts applied to this invoice.
-     */
-    /**
-     * @deprecated Discounts are now applied as ledger entries. This field may be removed in future versions.
-     *             The financial impact of discounts is recorded in the {@link br.com.hyteck.school_control.models.financial.LedgerEntry} table.
-     */
-    @Deprecated(since = "2.0.0", forRemoval = true)
-    @ManyToMany
-    @JoinTable(
-            name = "invoice_discounts",
-            joinColumns = @JoinColumn(name = "invoice_id"),
-            inverseJoinColumns = @JoinColumn(name = "discount_id")
-    )
-    @Builder.Default
-    private List<Discount> discounts = new ArrayList<>();
-
-    /**
      * The responsible party to whom this invoice is issued.
      */
     @ManyToOne

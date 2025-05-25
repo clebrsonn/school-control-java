@@ -8,6 +8,7 @@ import br.com.hyteck.school_control.web.dtos.auth.AuthenticationResponse;
 import br.com.hyteck.school_control.web.dtos.user.PasswordChangeRequest;
 import br.com.hyteck.school_control.web.dtos.user.UserResponse;
 import jakarta.validation.Valid;
+import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -29,6 +30,7 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequestMapping("/auth")
+@AllArgsConstructor
 public class AuthenticationController {
     private final JWTProvider jwtTokenService;
 
@@ -39,14 +41,6 @@ public class AuthenticationController {
     private final VerifyAccount verifyAccountUseCase;
 
     private final ChangePassword changePasswordUseCase;
-
-    public AuthenticationController(JWTProvider jwtTokenService, AuthenticationManager authenticationManager, UserDetailsService userDetailsService, VerifyAccount verifyAccountUseCase, ChangePassword changePasswordUseCase) {
-        this.jwtTokenService = jwtTokenService;
-        this.authenticationManager = authenticationManager;
-        this.userDetailsService = userDetailsService;
-        this.verifyAccountUseCase = verifyAccountUseCase;
-        this.changePasswordUseCase = changePasswordUseCase;
-    }
 
     /**
      * Authenticates a user and returns a JWT token along with user details.
