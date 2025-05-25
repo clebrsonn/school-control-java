@@ -1,25 +1,24 @@
 package br.com.hyteck.school_control.usecases.billing;
 
 import br.com.hyteck.school_control.models.classrooms.Enrollment;
-import br.com.hyteck.school_control.models.financial.Account;
-import br.com.hyteck.school_control.models.financial.AccountType;
-import br.com.hyteck.school_control.models.financial.LedgerEntryType;
+import br.com.hyteck.school_control.events.InvoiceCreatedEvent; // Added import
 import br.com.hyteck.school_control.models.payments.*;
 import br.com.hyteck.school_control.repositories.DiscountRepository;
 import br.com.hyteck.school_control.repositories.EnrollmentRepository;
 import br.com.hyteck.school_control.repositories.InvoiceRepository;
-import br.com.hyteck.school_control.services.financial.AccountService;
-import br.com.hyteck.school_control.services.financial.LedgerService;
+// import br.com.hyteck.school_control.services.financial.AccountService; // Removed import
+// import br.com.hyteck.school_control.services.financial.LedgerService; // Removed import
 import br.com.hyteck.school_control.usecases.notification.CreateNotification;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.context.ApplicationEventPublisher; // Added import
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+// import java.time.LocalDateTime; // Removed import - was only for ledgerService
 import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -40,13 +39,14 @@ public class GenerateInvoicesForParents {
     private final EnrollmentRepository enrollmentRepository;
     private final InvoiceRepository invoiceRepository;
     private final CreateNotification createNotification;
-    private final LedgerService ledgerService;
-    private final AccountService accountService;
+    // private final LedgerService ledgerService; // Removed field
+    // private final AccountService accountService; // Removed field
+    private final ApplicationEventPublisher eventPublisher; // Added field
 
     // Constants for Brazilian Portuguese locale, date and currency formatting.
     private static final Locale BRAZIL_LOCALE = Locale.of("pt", "BR");
-    private static final String TUITION_REVENUE_ACCOUNT_NAME = "Tuition Revenue";
-    private static final String DISCOUNT_EXPENSE_ACCOUNT_NAME = "Discount Expense";
+    // private static final String TUITION_REVENUE_ACCOUNT_NAME = "Tuition Revenue"; // Removed constant
+    // private static final String DISCOUNT_EXPENSE_ACCOUNT_NAME = "Discount Expense"; // Removed constant
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy", BRAZIL_LOCALE);
     private static final NumberFormat CURRENCY_FORMATTER = NumberFormat.getCurrencyInstance(BRAZIL_LOCALE);
 
@@ -141,20 +141,16 @@ public class GenerateInvoicesForParents {
             monthlyInvoice.calculateAmount(); // Explicitly calculate original amount
         }
 
-        // Save all created or updated invoices and post ledger transactions.
+        // Save all created or updated invoices and publish events.
         if (!invoicesByResponsibleId.isEmpty()) {
-            Account tuitionRevenueAccount = accountService.findOrCreateAccount(TUITION_REVENUE_ACCOUNT_NAME, AccountType.REVENUE, null);
-            log.info("Retrieved/Created Tuition Revenue account: {}", tuitionRevenueAccount.getName());
-            // Discount Expense account is not directly used for ledger posting anymore if discounts are itemized.
-            // It might still be relevant for other accounting purposes or if other discount types exist that are not itemized.
-            // For now, we remove its direct retrieval here as it's not used in the immediate subsequent logic.
-            // Account discountExpenseAccount = accountService.findOrCreateAccount(DISCOUNT_EXPENSE_ACCOUNT_NAME, AccountType.EXPENSE, null);
-            // log.info("Retrieved/Created Discount Expense account: {}", discountExpenseAccount.getName());
+            // Removed Account tuitionRevenueAccount = accountService.findOrCreateAccount(TUITION_REVENUE_ACCOUNT_NAME, AccountType.REVENUE, null);
+            // Removed log.info("Retrieved/Created Tuition Revenue account: {}", tuitionRevenueAccount.getName());
+            // Removed Account discountExpenseAccount retrieval
 
             for (Invoice invoice : invoicesByResponsibleId.values()) {
                 Responsible responsible = invoice.getResponsible();
-                Account responsibleARAccount = accountService.findOrCreateResponsibleARAccount(responsible.getId());
-                log.info("Retrieved/Created A/R account for responsible {}: {}", responsible.getName(), responsibleARAccount.getName());
+                // Removed Account responsibleARAccount = accountService.findOrCreateResponsibleARAccount(responsible.getId());
+                // Removed log.info("Retrieved/Created A/R account for responsible {}: {}", responsible.getName(), responsibleARAccount.getName());
 
                 // Calculate total discount amount for this invoice based on its items and applicable discounts.
                 // This is a simplified example. Real discount logic might be more complex.
@@ -212,31 +208,9 @@ public class GenerateInvoicesForParents {
                 Invoice savedInvoice = invoiceRepository.save(invoice);
                 log.info("Saved invoice ID {} for responsible {}", savedInvoice.getId(), responsible.getName());
 
-                // Post the main tuition fee transaction (Net Amount)
-                // savedInvoice.getOriginalAmount() now reflects the NET amount due to the earlier call to
-                // invoice.updateOriginalAmount() after adding any itemized discounts.
-                try {
-                    ledgerService.postTransaction(
-                            savedInvoice,
-                            null, // No payment at invoice generation
-                            responsibleARAccount, // Debit A/R
-                            tuitionRevenueAccount, // Credit Tuition Revenue
-                            savedInvoice.calculateAmount(), // This is now the NET amount
-                            LocalDateTime.now(ZoneId.of("America/Sao_Paulo")),
-                            "Monthly invoice " + savedInvoice.getId() + " (net) generated for " + responsible.getName() + " - Ref: " + targetMonth.format(DateTimeFormatter.ofPattern("MM/yyyy")),
-                            LedgerEntryType.TUITION_FEE
-                    );
-                    log.info("Posted TUITION_FEE transaction for invoice ID {} to ledger. Net Amount: {}. Debited: {}, Credited: {}.",
-                            savedInvoice.getId(), CURRENCY_FORMATTER.format(savedInvoice.calculateAmount()), responsibleARAccount.getName(), tuitionRevenueAccount.getName());
-                } catch (Exception e) {
-                    log.error("Failed to post TUITION_FEE transaction for invoice ID {}: {}. Rolling back.", savedInvoice.getId(), e.getMessage(), e);
-                    throw e; // Re-throw to ensure transaction rollback
-                }
-
-                // The separate DISCOUNT_APPLIED ledger posting block has been removed.
-                // The itemized discount (negative InvoiceItem) has already adjusted the 
-                // savedInvoice.originalAmount to be net. The main TUITION_FEE posting
-                // now correctly reflects this net amount.
+                // Publish InvoiceCreatedEvent
+                eventPublisher.publishEvent(new InvoiceCreatedEvent(this, savedInvoice));
+                log.info("Published InvoiceCreatedEvent for monthly invoice ID {}", savedInvoice.getId());
 
                 // Send notifications to responsibles about the new invoices.
                 // Ensure the responsible has an associated user account for notifications.
@@ -281,7 +255,7 @@ public class GenerateInvoicesForParents {
                     }
                 }
             }
-            log.info("{} monthly invoices processed and ledger entries posted for month {}.", invoicesByResponsibleId.size(), targetMonth);
+            log.info("{} monthly invoices processed and events published for month {}.", invoicesByResponsibleId.size(), targetMonth);
         } else {
             log.info("No new monthly invoices generated for month {}.", targetMonth);
         }

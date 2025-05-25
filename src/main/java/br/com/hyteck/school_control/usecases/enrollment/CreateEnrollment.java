@@ -9,10 +9,13 @@ import br.com.hyteck.school_control.repositories.ClassroomRepository;
 import br.com.hyteck.school_control.repositories.EnrollmentRepository;
 import br.com.hyteck.school_control.repositories.InvoiceRepository;
 import br.com.hyteck.school_control.repositories.StudentRepository;
+import br.com.hyteck.school_control.events.StudentEnrolledEvent; // Added import
 import br.com.hyteck.school_control.web.dtos.classroom.EnrollmentRequest;
+import br.com.hyteck.school_control.events.InvoiceCreatedEvent; // Added import
 import br.com.hyteck.school_control.web.dtos.classroom.EnrollmentResponse;
 import jakarta.validation.Valid;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.context.ApplicationEventPublisher; // Added import
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
@@ -30,14 +33,18 @@ public class CreateEnrollment {
     private final StudentRepository studentRepository;
     private final ClassroomRepository classRoomRepository;
     private final InvoiceRepository invoiceRepository;
+    private final ApplicationEventPublisher eventPublisher; // Added field
 
     public CreateEnrollment(EnrollmentRepository enrollmentRepository,
                             StudentRepository studentRepository,
-                            ClassroomRepository classRoomRepository, InvoiceRepository invoiceRepository) {
+                            ClassroomRepository classRoomRepository,
+                            InvoiceRepository invoiceRepository,
+                            ApplicationEventPublisher eventPublisher) { // Added eventPublisher parameter
         this.enrollmentRepository = enrollmentRepository;
         this.studentRepository = studentRepository;
         this.classRoomRepository = classRoomRepository;
         this.invoiceRepository = invoiceRepository;
+        this.eventPublisher = eventPublisher; // Assign to field
     }
 
     @Transactional
@@ -77,6 +84,17 @@ public class CreateEnrollment {
         Enrollment savedEnrollment = enrollmentRepository.save(newEnrollment);
         log.info("Matrícula criada com sucesso. ID: {}", savedEnrollment.getId());
 
+        // Publish StudentEnrolledEvent
+        StudentEnrolledEvent studentEnrolledEvent = new StudentEnrolledEvent(
+                this,
+                savedEnrollment.getId(),
+                savedEnrollment.getStudent().getId(),
+                savedEnrollment.getClassroom().getId(),
+                LocalDate.now() // Or savedEnrollment.getCreatedAt().toLocalDate() if available
+        );
+        eventPublisher.publishEvent(studentEnrolledEvent);
+        log.info("Published StudentEnrolledEvent for enrollment ID {}", savedEnrollment.getId());
+
         if (requestDTO.enrollmentFee() != null && requestDTO.enrollmentFee().compareTo(BigDecimal.ZERO) > 0) {
             createAndSaveEnrollmentFeeInvoice(savedEnrollment, requestDTO.enrollmentFee(), student.getResponsible());
         }
@@ -111,8 +129,12 @@ public class CreateEnrollment {
         feeInvoice.addItem(feeItem);
         feeInvoice.setAmount(feeInvoice.calculateAmount());
 
-        invoiceRepository.save(feeInvoice); // Salva a fatura (e o item por cascata)
-        log.info("Fatura da taxa de matrícula ID {} criada para enrollment {}", feeInvoice.getId(), enrollment.getId());
+        Invoice savedInvoice = invoiceRepository.save(feeInvoice); // Salva a fatura e captura a instância salva
+        log.info("Fatura da taxa de matrícula ID {} criada para enrollment {}", savedInvoice.getId(), enrollment.getId());
+
+        // Publish InvoiceCreatedEvent
+        eventPublisher.publishEvent(new InvoiceCreatedEvent(this, savedInvoice));
+        log.info("Published InvoiceCreatedEvent for invoice ID {}", savedInvoice.getId());
     }
 
 }

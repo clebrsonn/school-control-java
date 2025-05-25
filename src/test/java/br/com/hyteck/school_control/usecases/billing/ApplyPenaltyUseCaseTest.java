@@ -2,30 +2,32 @@ package br.com.hyteck.school_control.usecases.billing;
 
 import br.com.hyteck.school_control.exceptions.BusinessException;
 import br.com.hyteck.school_control.exceptions.ResourceNotFoundException;
-import br.com.hyteck.school_control.models.financial.Account;
-import br.com.hyteck.school_control.models.financial.AccountType;
-import br.com.hyteck.school_control.models.financial.LedgerEntryType;
+// import br.com.hyteck.school_control.models.financial.Account; // Removed
+// import br.com.hyteck.school_control.models.financial.AccountType; // Removed
+// import br.com.hyteck.school_control.models.financial.LedgerEntryType; // Removed
 import br.com.hyteck.school_control.models.payments.Invoice;
 import br.com.hyteck.school_control.models.payments.InvoiceStatus;
 import br.com.hyteck.school_control.models.payments.Responsible;
 import br.com.hyteck.school_control.repositories.InvoiceRepository;
 import br.com.hyteck.school_control.events.PenaltyAssessedEvent;
-import br.com.hyteck.school_control.models.auth.User; // Needed for responsible.user
-import br.com.hyteck.school_control.services.financial.AccountService;
-import br.com.hyteck.school_control.services.financial.LedgerService;
+// import br.com.hyteck.school_control.models.auth.User; // No longer needed if responsible setup changes
+// import br.com.hyteck.school_control.services.financial.AccountService; // Removed
+// import br.com.hyteck.school_control.services.financial.LedgerService; // Removed
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationEventPublisher; // Added
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor; // Added for event capturing
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+// import java.time.LocalDateTime; // Removed
 import java.time.ZoneId;
 import java.util.Optional;
+import java.util.UUID; // Added for event payload verification
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -38,13 +40,10 @@ class ApplyPenaltyUseCaseTest {
     @Mock
     private InvoiceRepository invoiceRepository;
 
+    // @Mock private AccountService accountService; // Removed
+    // @Mock private LedgerService ledgerService; // Removed
     @Mock
-    private AccountService accountService;
-
-    @Mock
-    private LedgerService ledgerService;
-    @Mock
-    private ApplicationEventPublisher eventPublisher; // Added
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private ApplyPenaltyUseCase applyPenaltyUseCase;
@@ -54,8 +53,8 @@ class ApplyPenaltyUseCaseTest {
     private Invoice pendingInvoiceNotDue;
     private Invoice paidInvoice;
     private Responsible responsible;
-    private Account arAccount;
-    private Account penaltyRevenueAccount;
+    // private Account arAccount; // Removed
+    // private Account penaltyRevenueAccount; // Removed
 
     private final String invoiceId = "inv123";
     private final String responsibleId = "resp123";
@@ -64,9 +63,9 @@ class ApplyPenaltyUseCaseTest {
 
     @BeforeEach
     void setUp() {
-        responsible = Responsible.builder().id(responsibleId).name("Test Resp").username("respUserTest").build();
-        arAccount = Account.builder().id("arAcc").type(AccountType.ASSET).responsible(responsible).name("A/R - Test Resp").build();
-        penaltyRevenueAccount = Account.builder().id("penaltyAcc").type(AccountType.REVENUE).name("Penalty Revenue").build();
+        responsible = Responsible.builder().id(responsibleId).name("Test Resp").username("respUserTest").build(); // username might not be needed
+        // arAccount setup removed
+        // penaltyRevenueAccount setup removed
 
         overdueInvoice = Invoice.builder()
                 .id(invoiceId)
@@ -101,48 +100,48 @@ class ApplyPenaltyUseCaseTest {
                 .build();
     }
 
-    private void setupMocksForSuccessfulPenalty() {
-        when(accountService.findOrCreateResponsibleARAccount(responsibleId)).thenReturn(arAccount);
-        when(accountService.findOrCreateAccount(eq("Penalty Revenue"), eq(AccountType.REVENUE), eq(null)))
-                .thenReturn(penaltyRevenueAccount);
-        doNothing().when(ledgerService).postTransaction(
-                any(Invoice.class), eq(null), eq(arAccount), eq(penaltyRevenueAccount), eq(PENALTY_AMOUNT),
-                any(LocalDateTime.class), anyString(), eq(LedgerEntryType.PENALTY_ASSESSED)
-        );
+    private void setupMocksForSuccessfulPenaltyApplication() {
+        // Removed accountService and ledgerService mocks from here
         when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> inv.getArgument(0));
-        doNothing().when(eventPublisher).publishEvent(any(PenaltyAssessedEvent.class)); // Added
+        // eventPublisher mock is handled directly in tests or can be set here if always the same
     }
 
 
     @Test
     void execute_ShouldApplyPenalty_WhenInvoiceIsOverdue() {
         when(invoiceRepository.findById(invoiceId)).thenReturn(Optional.of(overdueInvoice));
-        setupMocksForSuccessfulPenalty();
+        setupMocksForSuccessfulPenaltyApplication(); // Updated helper name
 
         assertDoesNotThrow(() -> applyPenaltyUseCase.execute(invoiceId));
 
-        verify(ledgerService).postTransaction(
-                eq(overdueInvoice), eq(null), eq(arAccount), eq(penaltyRevenueAccount), eq(PENALTY_AMOUNT),
-                any(LocalDateTime.class), eq("Penalty assessed for overdue Invoice #" + invoiceId), eq(LedgerEntryType.PENALTY_ASSESSED)
-        );
+        // verify(ledgerService).postTransaction(...); // Removed
         verify(invoiceRepository).save(overdueInvoice); 
-        verify(eventPublisher).publishEvent(any(PenaltyAssessedEvent.class));
+
+        ArgumentCaptor<PenaltyAssessedEvent> eventCaptor = ArgumentCaptor.forClass(PenaltyAssessedEvent.class);
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+        PenaltyAssessedEvent publishedEvent = eventCaptor.getValue();
+        assertEquals(UUID.fromString(invoiceId), publishedEvent.getInvoiceId());
+        assertEquals(PENALTY_AMOUNT, publishedEvent.getPenaltyAmount());
+        assertEquals(UUID.fromString(responsibleId), publishedEvent.getResponsibleId());
     }
 
     @Test
     void execute_ShouldApplyPenaltyAndUpdateStatus_WhenInvoiceIsPendingAndPastDue() {
         when(invoiceRepository.findById(pendingInvoicePastDue.getId())).thenReturn(Optional.of(pendingInvoicePastDue));
-        setupMocksForSuccessfulPenalty();
+        setupMocksForSuccessfulPenaltyApplication(); // Updated helper name
         
         assertDoesNotThrow(() -> applyPenaltyUseCase.execute(pendingInvoicePastDue.getId()));
 
         assertEquals(InvoiceStatus.OVERDUE, pendingInvoicePastDue.getStatus());
-        verify(ledgerService).postTransaction(
-                eq(pendingInvoicePastDue), eq(null), eq(arAccount), eq(penaltyRevenueAccount), eq(PENALTY_AMOUNT),
-                any(LocalDateTime.class), anyString(), eq(LedgerEntryType.PENALTY_ASSESSED)
-        );
+        // verify(ledgerService).postTransaction(...); // Removed
         verify(invoiceRepository).save(pendingInvoicePastDue); 
-        verify(eventPublisher).publishEvent(any(PenaltyAssessedEvent.class));
+
+        ArgumentCaptor<PenaltyAssessedEvent> eventCaptor = ArgumentCaptor.forClass(PenaltyAssessedEvent.class);
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+        PenaltyAssessedEvent publishedEvent = eventCaptor.getValue();
+        assertEquals(UUID.fromString(pendingInvoicePastDue.getId()), publishedEvent.getInvoiceId());
+        assertEquals(PENALTY_AMOUNT, publishedEvent.getPenaltyAmount());
+        assertEquals(UUID.fromString(responsibleId), publishedEvent.getResponsibleId());
     }
 
     @Test
@@ -152,7 +151,8 @@ class ApplyPenaltyUseCaseTest {
         BusinessException exception = assertThrows(BusinessException.class,
                 () -> applyPenaltyUseCase.execute(pendingInvoiceNotDue.getId()));
         assertTrue(exception.getMessage().contains("is not eligible for penalty application"));
-        verifyNoInteractions(ledgerService);
+        // verifyNoInteractions(ledgerService); // ledgerService is removed
+        verify(invoiceRepository, never()).save(any()); // Should not save if not eligible
         verifyNoInteractions(eventPublisher);
     }
     
@@ -163,7 +163,8 @@ class ApplyPenaltyUseCaseTest {
         BusinessException exception = assertThrows(BusinessException.class,
                 () -> applyPenaltyUseCase.execute(paidInvoice.getId()));
         assertTrue(exception.getMessage().contains("is not eligible for penalty application"));
-        verifyNoInteractions(ledgerService);
+        // verifyNoInteractions(ledgerService); // ledgerService is removed
+        verify(invoiceRepository, never()).save(any()); // Should not save if not eligible
         verifyNoInteractions(eventPublisher);
     }
 
@@ -173,8 +174,8 @@ class ApplyPenaltyUseCaseTest {
         when(invoiceRepository.findById(nonExistentId)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> applyPenaltyUseCase.execute(nonExistentId));
-        verifyNoInteractions(accountService);
-        verifyNoInteractions(ledgerService);
+        // verifyNoInteractions(accountService); // accountService is removed
+        // verifyNoInteractions(ledgerService); // ledgerService is removed
         verifyNoInteractions(eventPublisher);
     }
 
@@ -192,7 +193,8 @@ class ApplyPenaltyUseCaseTest {
         BusinessException ex2 = assertThrows(BusinessException.class, () -> applyPenaltyUseCase.execute(invoiceId));
         assertEquals("Invoice responsible or user details not found. Cannot apply penalty.", ex2.getMessage());
         
-        verifyNoInteractions(ledgerService);
+        // verifyNoInteractions(ledgerService); // ledgerService is removed
+        verify(invoiceRepository, never()).save(any()); // Should not save if responsible is invalid
         verifyNoInteractions(eventPublisher);
     }
 }

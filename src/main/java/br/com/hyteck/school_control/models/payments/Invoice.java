@@ -144,4 +144,30 @@ public class Invoice extends AbstractModel {
     public void updateAmount() {
         this.amount = calculateAmount();
     }
+
+    /**
+     * Applies a payment to the invoice and updates its status based on the payment amount,
+     * the balance owed before this payment, and the current date.
+     *
+     * @param paymentAmountReceived The amount of the payment being applied.
+     * @param balanceOwedBeforeThisPayment The outstanding balance of the invoice *before* this current payment is considered.
+     * @param currentDate The current date, used to determine if an unpaid invoice is overdue.
+     */
+    public void applyPayment(BigDecimal paymentAmountReceived, BigDecimal balanceOwedBeforeThisPayment, LocalDate currentDate) {
+        if (this.status == InvoiceStatus.CANCELLED) {
+            // Consider using a logger if available, e.g., log.warn("Attempted to apply payment to a CANCELLED invoice: {}", this.getId());
+            System.out.println("Warning: Attempted to apply payment to a CANCELLED invoice: " + this.getId()); // Placeholder for logging
+            return;
+        }
+
+        if (paymentAmountReceived.compareTo(balanceOwedBeforeThisPayment) >= 0) {
+            this.status = InvoiceStatus.PAID;
+        } else {
+            if (currentDate.isAfter(this.dueDate)) {
+                this.status = InvoiceStatus.OVERDUE;
+            } else {
+                this.status = InvoiceStatus.PENDING;
+            }
+        }
+    }
 }

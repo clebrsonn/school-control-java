@@ -1,17 +1,18 @@
 package br.com.hyteck.school_control.usecases.billing;
 
 import br.com.hyteck.school_control.events.PenaltyAssessedEvent;
+import br.com.hyteck.school_control.events.PenaltyAssessedEvent;
 import br.com.hyteck.school_control.exceptions.BusinessException;
 import br.com.hyteck.school_control.exceptions.ResourceNotFoundException;
-import br.com.hyteck.school_control.models.financial.Account;
-import br.com.hyteck.school_control.models.financial.AccountType;
-import br.com.hyteck.school_control.models.financial.LedgerEntryType;
+// import br.com.hyteck.school_control.models.financial.Account; // Removed
+// import br.com.hyteck.school_control.models.financial.AccountType; // Removed
+// import br.com.hyteck.school_control.models.financial.LedgerEntryType; // Removed
 import br.com.hyteck.school_control.models.payments.Invoice;
 import br.com.hyteck.school_control.models.payments.InvoiceStatus;
 import br.com.hyteck.school_control.models.payments.Responsible;
 import br.com.hyteck.school_control.repositories.InvoiceRepository;
-import br.com.hyteck.school_control.services.financial.AccountService;
-import br.com.hyteck.school_control.services.financial.LedgerService;
+// import br.com.hyteck.school_control.services.financial.AccountService; // Removed
+// import br.com.hyteck.school_control.services.financial.LedgerService; // Removed
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -20,7 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+// import java.time.LocalDateTime; // No longer needed for direct ledger posting
 import java.time.ZoneId;
 import java.util.UUID;
 
@@ -34,14 +35,14 @@ import java.util.UUID;
 public class ApplyPenaltyUseCase {
 
     private final InvoiceRepository invoiceRepository;
-    private final AccountService accountService;
-    private final LedgerService ledgerService;
-    private final ApplicationEventPublisher eventPublisher; // Added
+    // private final AccountService accountService; // Removed
+    // private final LedgerService ledgerService; // Removed
+    private final ApplicationEventPublisher eventPublisher;
 
     // Define the penalty amount, could be configurable
     private static final BigDecimal PENALTY_AMOUNT = new BigDecimal("10.00");
-    private static final String PENALTY_REVENUE_ACCOUNT_NAME = "Penalty Revenue";
-    private static final String PENALTY_DESCRIPTION_PREFIX = "Penalty assessed for overdue Invoice #";
+    // private static final String PENALTY_REVENUE_ACCOUNT_NAME = "Penalty Revenue"; // Removed
+    // private static final String PENALTY_DESCRIPTION_PREFIX = "Penalty assessed for overdue Invoice #"; // Removed
 
 
     /**
@@ -90,33 +91,23 @@ public class ApplyPenaltyUseCase {
             throw new BusinessException("Invoice responsible or user details not found. Cannot apply penalty.");
         }
 
-        Account arAccount = accountService.findOrCreateResponsibleARAccount(responsible.getId());
-        Account penaltyRevenueAccount = accountService.findOrCreateAccount(PENALTY_REVENUE_ACCOUNT_NAME, AccountType.REVENUE, null);
+        // Removed account fetching and direct ledger posting
+        // Account arAccount = accountService.findOrCreateResponsibleARAccount(responsible.getId());
+        // Account penaltyRevenueAccount = accountService.findOrCreateAccount(PENALTY_REVENUE_ACCOUNT_NAME, AccountType.REVENUE, null);
 
         // Check if a penalty of this type was already applied to this invoice to prevent duplicates
-        // This check might need to be more sophisticated, e.g., checking ledger entries for this invoice with PENALTY_ASSESSED type.
-        // For now, we assume one penalty application is triggered when due.
+        // This check might need to be more sophisticated. For now, the core logic of applying penalty if eligible remains.
+        // The event will trigger the financial transaction.
 
         log.info("Applying penalty of {} to Invoice ID: {} for Responsible: {}", PENALTY_AMOUNT, invoiceId, responsible.getName());
 
-        ledgerService.postTransaction(
-                invoice,
-                null, // No direct payment associated with penalty assessment itself
-                arAccount,                // Debit A/R (increase amount due from responsible)
-                penaltyRevenueAccount,    // Credit Penalty Revenue
-                PENALTY_AMOUNT,
-                LocalDateTime.now(ZoneId.of("America/Sao_Paulo")),
-                PENALTY_DESCRIPTION_PREFIX + invoice.getId(),
-                LedgerEntryType.PENALTY_ASSESSED
-        );
+        // Removed: ledgerService.postTransaction(...)
         
-        // The ledgerService.postTransaction already updates the balances on arAccount.
-        // No need to explicitly call accountService.updateAccountBalance(arAccount.getId()) here again.
-        // Save the invoice if its status was changed.
+        // Save the invoice if its status was changed (e.g., from PENDING to OVERDUE).
+        // This is important for reflecting the invoice's state correctly.
         invoiceRepository.save(invoice);
 
-        log.info("Penalty successfully applied to Invoice ID: {}. A/R account {} debited, Penalty Revenue account {} credited.",
-                invoiceId, arAccount.getName(), penaltyRevenueAccount.getName());
+        log.info("Penalty application process for Invoice ID: {} initiated. Event will be published.", invoiceId);
         
         // Publish PenaltyAssessedEvent
         try {

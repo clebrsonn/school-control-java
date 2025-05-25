@@ -102,4 +102,28 @@ public interface LedgerEntryRepository extends JpaRepository<LedgerEntry, String
             @Param("accountId") String accountId,
             @Param("entryType") LedgerEntryType entryType
     );
+
+    /**
+     * Checks if a ledger entry exists for a given payment ID and entry type.
+     * This is crucial for idempotency checks, ensuring that the same payment event
+     * isn't processed multiple times.
+     *
+     * @param paymentId The unique identifier of the payment.
+     * @param type The type of ledger entry (e.g., PAYMENT_RECEIVED).
+     * @return {@code true} if an entry with the specified payment ID and type exists, {@code false} otherwise.
+     */
+    @Query("SELECT COUNT(le) > 0 FROM LedgerEntry le WHERE le.payment.id = :paymentId AND le.type = :type")
+    boolean existsByPaymentIdAndType(@Param("paymentId") String paymentId, @Param("type") LedgerEntryType type);
+
+    /**
+     * Checks if a ledger entry exists for a given invoice ID and entry type.
+     * This is crucial for idempotency checks, particularly for events like penalty assessment
+     * that are tied to an invoice rather than a direct payment.
+     *
+     * @param invoiceId The unique identifier of the invoice.
+     * @param type The type of ledger entry (e.g., PENALTY_ASSESSED).
+     * @return {@code true} if an entry with the specified invoice ID and type exists, {@code false} otherwise.
+     */
+    @Query("SELECT COUNT(le) > 0 FROM LedgerEntry le WHERE le.invoice.id = :invoiceId AND le.type = :type")
+    boolean existsByInvoiceIdAndType(@Param("invoiceId") String invoiceId, @Param("type") LedgerEntryType type);
 }

@@ -3,15 +3,15 @@ package br.com.hyteck.school_control.usecases.billing;
 import br.com.hyteck.school_control.exceptions.BusinessException;
 import br.com.hyteck.school_control.exceptions.ResourceNotFoundException;
 import br.com.hyteck.school_control.models.financial.Account;
-import br.com.hyteck.school_control.models.financial.AccountType;
-import br.com.hyteck.school_control.models.financial.LedgerEntryType;
+import br.com.hyteck.school_control.models.financial.AccountType; // Still needed for arAccount setup
+// import br.com.hyteck.school_control.models.financial.LedgerEntryType; // Removed
 import br.com.hyteck.school_control.models.payments.*;
 import br.com.hyteck.school_control.repositories.InvoiceRepository;
 import br.com.hyteck.school_control.repositories.PaymentRepository;
 import br.com.hyteck.school_control.repositories.financial.LedgerEntryRepository;
 import br.com.hyteck.school_control.events.PaymentProcessedEvent;
 import br.com.hyteck.school_control.services.financial.AccountService;
-import br.com.hyteck.school_control.services.financial.LedgerService;
+// import br.com.hyteck.school_control.services.financial.LedgerService; // Removed
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationEventPublisher; // Added
@@ -40,8 +40,7 @@ class ProcessPaymentUseCaseTest {
     private PaymentRepository paymentRepository;
     @Mock
     private AccountService accountService;
-    @Mock
-    private LedgerService ledgerService;
+    // @Mock private LedgerService ledgerService; // Removed
     @Mock
     private LedgerEntryRepository ledgerEntryRepository;
     @Mock
@@ -54,7 +53,7 @@ class ProcessPaymentUseCaseTest {
     private Invoice overdueInvoice;
     private Responsible responsible;
     private Account arAccount;
-    private Account cashClearingAccount;
+    // private Account cashClearingAccount; // Removed as it's no longer used
     private final String invoiceId = "inv1";
     private final String responsibleId = "resp1";
 
@@ -63,7 +62,7 @@ class ProcessPaymentUseCaseTest {
 
         responsible = Responsible.builder().id(responsibleId).name("Test Responsible").username("respUser").build();
         arAccount = Account.builder().id("arAcc1").type(AccountType.ASSET).responsible(responsible).name("A/R - Test Responsible").build();
-        cashClearingAccount = Account.builder().id("cashAcc1").type(AccountType.ASSET).name("Cash/Bank Clearing").build();
+        // cashClearingAccount = Account.builder().id("cashAcc1").type(AccountType.ASSET).name("Cash/Bank Clearing").build(); // Removed
 
         pendingInvoice = Invoice.builder()
                 .id(invoiceId)
@@ -92,11 +91,11 @@ class ProcessPaymentUseCaseTest {
         });
         // Use the actual responsibleId from the invoiceToProcess for consistency
         when(accountService.findOrCreateResponsibleARAccount(invoiceToProcess.getResponsible().getId())).thenReturn(arAccount);
-        when(accountService.findOrCreateAccount("Cash/Bank Clearing", AccountType.ASSET, null)).thenReturn(cashClearingAccount);
-        doNothing().when(ledgerService).postTransaction(
-                any(Invoice.class), any(Payment.class), any(Account.class), any(Account.class),
-                any(BigDecimal.class), any(LocalDateTime.class), anyString(), any(LedgerEntryType.class)
-        );
+        // Removed: when(accountService.findOrCreateAccount("Cash/Bank Clearing", AccountType.ASSET, null)).thenReturn(cashClearingAccount);
+        // Removed: doNothing().when(ledgerService).postTransaction(...);
+        
+        // This 'resultingBalanceOnAR' is the balance *before* the current payment is applied by the listener.
+        // The use case will subtract the current payment amount from this to determine if the invoice is paid.
         when(ledgerEntryRepository.getBalanceForInvoiceOnAccount(arAccount.getId(), invoiceToProcess.getId())).thenReturn(resultingBalanceOnAR);
         when(invoiceRepository.save(any(Invoice.class))).thenAnswer(inv -> inv.getArgument(0));
     }
@@ -105,8 +104,8 @@ class ProcessPaymentUseCaseTest {
     void execute_ShouldProcessFullPayment_AndMarkInvoiceAsPaid() {
         // Arrange
         BigDecimal paymentAmount = new BigDecimal("200.00");
-        // After payment, balance on A/R for this invoice becomes 0
-        mockSuccessfulPaymentScenario(pendingInvoice, paymentAmount, BigDecimal.ZERO);
+        // To make effectiveBalanceForStatusCheck = 0, mock getBalanceForInvoiceOnAccount to return current paymentAmount
+        mockSuccessfulPaymentScenario(pendingInvoice, paymentAmount, paymentAmount); 
 
         // Act
         Payment resultPayment = processPaymentUseCase.execute(invoiceId, paymentAmount, PaymentMethod.CREDIT_CARD);
@@ -116,11 +115,7 @@ class ProcessPaymentUseCaseTest {
         assertEquals(PaymentStatus.COMPLETED, resultPayment.getStatus());
         assertEquals(InvoiceStatus.PAID, pendingInvoice.getStatus()); // Verify invoice status changed
 
-        verify(ledgerService).postTransaction(
-                eq(pendingInvoice), eq(resultPayment), eq(cashClearingAccount), eq(arAccount),
-                eq(paymentAmount), any(LocalDateTime.class),
-                contains("Payment received for Invoice #" + invoiceId), eq(LedgerEntryType.PAYMENT_RECEIVED)
-        );
+        // verify(ledgerService).postTransaction(...); // Removed
         verify(invoiceRepository).save(pendingInvoice);
         verify(paymentRepository, times(2)).save(resultPayment); 
         verify(eventPublisher).publishEvent(any(PaymentProcessedEvent.class)); // Verify event publication
@@ -129,7 +124,8 @@ class ProcessPaymentUseCaseTest {
     @Test
     void execute_ShouldProcessFullPaymentForOverdueInvoice_AndMarkInvoiceAsPaid() {
         BigDecimal paymentAmount = new BigDecimal("150.00");
-        mockSuccessfulPaymentScenario(overdueInvoice, paymentAmount, BigDecimal.ZERO);
+        // To make effectiveBalanceForStatusCheck = 0, mock getBalanceForInvoiceOnAccount to return current paymentAmount
+        mockSuccessfulPaymentScenario(overdueInvoice, paymentAmount, paymentAmount);
 
         Payment resultPayment = processPaymentUseCase.execute(overdueInvoice.getId(), paymentAmount, PaymentMethod.BANK_TRANSFER);
 
@@ -144,8 +140,10 @@ class ProcessPaymentUseCaseTest {
     void execute_ShouldProcessPartialPayment_AndKeepInvoicePending() {
         // Arrange
         BigDecimal paymentAmount = new BigDecimal("100.00");
-        // After partial payment, balance on A/R for this invoice is 100.00 (200 original - 100 paid)
-        mockSuccessfulPaymentScenario(pendingInvoice, paymentAmount, new BigDecimal("100.00"));
+        // To make effectiveBalanceForStatusCheck > 0 (e.g., 100), mock getBalanceForInvoiceOnAccount to return current paymentAmount + 100
+        // Original invoice amount is 200. Payment is 100. Remaining should be 100.
+        // So, balance *before* this payment was 200.
+        mockSuccessfulPaymentScenario(pendingInvoice, paymentAmount, new BigDecimal("200.00"));
 
         // Act
         Payment resultPayment = processPaymentUseCase.execute(invoiceId, paymentAmount, PaymentMethod.DEBIT_CARD);
@@ -155,11 +153,7 @@ class ProcessPaymentUseCaseTest {
         assertEquals(PaymentStatus.COMPLETED, resultPayment.getStatus());
         assertEquals(InvoiceStatus.PENDING, pendingInvoice.getStatus()); // Still PENDING as not fully paid and not overdue
 
-        verify(ledgerService).postTransaction(
-            eq(pendingInvoice), eq(resultPayment), eq(cashClearingAccount), eq(arAccount),
-            eq(paymentAmount), any(LocalDateTime.class),
-            contains("Payment received for Invoice #" + invoiceId), eq(LedgerEntryType.PAYMENT_RECEIVED)
-        );
+        // verify(ledgerService).postTransaction(...); // Removed
         verify(invoiceRepository).save(pendingInvoice);
         verify(eventPublisher).publishEvent(any(PaymentProcessedEvent.class));
     }
@@ -167,8 +161,9 @@ class ProcessPaymentUseCaseTest {
     @Test
     void execute_ShouldProcessPartialPayment_AndMarkInvoiceOverdue_IfPastDueDate() {
         BigDecimal paymentAmount = new BigDecimal("50.00");
-        // After partial payment, balance on A/R for this invoice is 100.00 (150 original - 50 paid)
-        mockSuccessfulPaymentScenario(overdueInvoice, paymentAmount, new BigDecimal("100.00"));
+        // Original overdue invoice amount is 150. Payment is 50. Remaining should be 100.
+        // So, balance *before* this payment was 150.
+        mockSuccessfulPaymentScenario(overdueInvoice, paymentAmount, new BigDecimal("150.00"));
 
         Payment resultPayment = processPaymentUseCase.execute(overdueInvoice.getId(), paymentAmount, PaymentMethod.PIX);
 
