@@ -8,6 +8,7 @@ import br.com.hyteck.school_control.models.payments.Invoice;
 import br.com.hyteck.school_control.models.payments.Responsible;
 import br.com.hyteck.school_control.repositories.InvoiceRepository;
 import br.com.hyteck.school_control.repositories.ResponsibleRepository;
+import br.com.hyteck.school_control.repositories.financial.LedgerEntryRepository;
 import br.com.hyteck.school_control.services.financial.AccountService;
 import br.com.hyteck.school_control.services.financial.LedgerService;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,7 @@ public class PenaltyLedgerListener {
     private final AccountService accountService;
     private final InvoiceRepository invoiceRepository;
     private final ResponsibleRepository responsibleRepository;
+    private final LedgerEntryRepository ledgerEntryRepository;
 
     @EventListener
     @Transactional
@@ -37,8 +39,15 @@ public class PenaltyLedgerListener {
                 event.getInvoiceId(), event.getPenaltyAmount(), event.getResponsibleId());
 
         try {
-            // Convert UUIDs from event to String for repository lookup.
             String invoiceIdStr = event.getInvoiceId().toString();
+
+            // Idempotency check
+            if (ledgerEntryRepository.existsByInvoiceIdAndType(invoiceIdStr, LedgerEntryType.PENALTY_ASSESSED)) {
+                log.info("PenaltyAssessedEvent for Invoice ID: {} has already been processed for this penalty type. Skipping.", event.getInvoiceId());
+                return;
+            }
+
+            // Convert UUIDs from event to String for repository lookup.
             String responsibleIdStr = event.getResponsibleId().toString();
 
             Invoice invoice = invoiceRepository.findById(invoiceIdStr)

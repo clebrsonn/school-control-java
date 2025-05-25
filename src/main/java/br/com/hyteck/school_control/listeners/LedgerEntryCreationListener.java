@@ -7,6 +7,7 @@ import br.com.hyteck.school_control.models.financial.LedgerEntryType;
 import br.com.hyteck.school_control.models.payments.Invoice;
 import br.com.hyteck.school_control.models.payments.Responsible;
 import br.com.hyteck.school_control.models.payments.Types; // Added import
+import br.com.hyteck.school_control.repositories.financial.LedgerEntryRepository;
 import br.com.hyteck.school_control.services.financial.AccountService;
 import br.com.hyteck.school_control.services.financial.LedgerService;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ public class LedgerEntryCreationListener {
 
     private final LedgerService ledgerService;
     private final AccountService accountService;
+    private final LedgerEntryRepository ledgerEntryRepository;
 
     @EventListener
     @Transactional
@@ -84,6 +86,12 @@ public class LedgerEntryCreationListener {
             creditAccountName = "Tuition Revenue"; // Default fallback
             ledgerEntryType = LedgerEntryType.TUITION_FEE; // Default fallback
             baseDescription = String.format("Invoice charges - Invoice: %s - Ref: %s", invoice.getId(), invoice.getReferenceMonth() != null ? invoice.getReferenceMonth().toString() : "N/A");
+        }
+
+        // Idempotency check
+        if (ledgerEntryRepository.existsByInvoiceIdAndType(invoice.getId(), ledgerEntryType)) {
+            log.info("InvoiceCreatedEvent for Invoice ID: {} with type: {} has already been processed. Skipping.", invoice.getId(), ledgerEntryType);
+            return;
         }
 
         Account creditAccount = accountService.findOrCreateAccount(creditAccountName, AccountType.REVENUE, null);

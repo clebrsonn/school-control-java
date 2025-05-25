@@ -53,7 +53,12 @@ public class VerificationEmailListener {
 
         // Delegate the email sending task to the EmailService.
         // This service is expected to handle the actual construction and sending of the email.
-        asyncEmailSender.send(verificationToken);
-        logger.info("Verification email sending process initiated for user: {}", user.getEmail());
+        try {
+            asyncEmailSender.send(verificationToken);
+            logger.info("Verification email sending process initiated for user: {}", user.getEmail());
+        } catch (Exception e) {
+            logger.error("Failed to send verification email for token: {} to user: {}. Error: {}",
+                    verificationToken.getToken(), user.getEmail(), e.getMessage(), e);
+        }
     }
 }

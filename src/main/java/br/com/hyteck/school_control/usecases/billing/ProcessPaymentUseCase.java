@@ -79,32 +79,19 @@ public class ProcessPaymentUseCase {
         // To make the status update reflect the current payment's effect, we adjust the fetched balance.
         BigDecimal invoiceBalanceOnAR = ledgerEntryRepository.getBalanceForInvoiceOnAccount(arAccount.getId(), invoice.getId());
         invoiceBalanceOnAR = (invoiceBalanceOnAR == null) ? BigDecimal.ZERO : invoiceBalanceOnAR;
+
+        // Call the new invoice method to update its status
+        invoice.applyPayment(savedPayment.getAmountPaid(), invoiceBalanceOnAR, LocalDate.now(ZoneId.of("America/Sao_Paulo")));
         
-        BigDecimal effectiveBalanceForStatusCheck = invoiceBalanceOnAR.subtract(amount);
-        log.info("Balance for Invoice ID {} on A/R Account {} is: {}. Current payment: {}. Effective balance for status update: {}",
-                 invoice.getId(), arAccount.getName(), invoiceBalanceOnAR, amount, effectiveBalanceForStatusCheck);
-        
-        // Use effectiveBalanceForStatusCheck for subsequent logic
-        if (effectiveBalanceForStatusCheck.compareTo(BigDecimal.ZERO) <= 0) {
-            // If balance is zero or negative (overpayment), mark as PAID
-            invoice.setStatus(InvoiceStatus.PAID);
-            savedPayment.setStatus(PaymentStatus.COMPLETED);
-            log.info("Invoice ID: {} marked as PAID. Payment ID: {} marked as COMPLETED.", invoiceId, savedPayment.getId());
-        } else {
-            // Partially paid
-            savedPayment.setStatus(PaymentStatus.COMPLETED); // Payment itself is completed
-            log.info("Invoice ID: {} is partially paid. Effective balance on A/R after this payment: {}. Payment ID: {} marked as COMPLETED.",
-                    invoiceId, effectiveBalanceForStatusCheck, savedPayment.getId());
-            if (invoice.getDueDate().isBefore(LocalDate.now(ZoneId.of("America/Sao_Paulo"))) && invoice.getStatus() != InvoiceStatus.PAID) {
-                invoice.setStatus(InvoiceStatus.OVERDUE);
-                 log.info("Invoice ID: {} is past due date and not fully paid, marked as OVERDUE.", invoiceId);
-            }
-        }
+        // The payment itself is considered completed once processed
+        savedPayment.setStatus(PaymentStatus.COMPLETED);
+        log.info("Payment ID: {} marked as COMPLETED. Invoice ID: {} status updated to: {}", savedPayment.getId(), invoiceId, invoice.getStatus());
         
         // Associate payment with invoice (if not already done by builder, good to be explicit)
+        // and save the updated invoice and payment status
         invoice.setPayment(savedPayment);
-        invoiceRepository.save(invoice);
-        Payment finalPayment = paymentRepository.save(savedPayment); // Save payment again if status changed
+        invoiceRepository.save(invoice); 
+        Payment finalPayment = paymentRepository.save(savedPayment);
 
         // Publish PaymentProcessedEvent
         try {

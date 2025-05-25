@@ -18,6 +18,9 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.Logger; // Added import
+import org.springframework.test.util.ReflectionTestUtils; // Added import
+
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -35,8 +38,11 @@ class PaymentLedgerListenerTest {
     @Mock private InvoiceRepository invoiceRepository;
     @Mock private PaymentRepository paymentRepository;
     @Mock private ResponsibleRepository responsibleRepository;
+    @Mock private LedgerEntryRepository ledgerEntryRepository; // Added mock
 
     @InjectMocks private PaymentLedgerListener listener;
+
+    @Mock private Logger logger; // Added mock for SLF4J Logger
 
     @Captor private ArgumentCaptor<LocalDateTime> dateCaptor;
     @Captor private ArgumentCaptor<String> descriptionCaptor;
@@ -73,6 +79,9 @@ class PaymentLedgerListenerTest {
         
         cashAccount = Account.builder().id("cashAccId").name("Cash/Bank Clearing").type(AccountType.ASSET).build();
         arAccount = Account.builder().id("arAccId").name("A/R Responsible").type(AccountType.ASSET).build();
+
+        // Inject the mocked logger into the listener
+        ReflectionTestUtils.setField(listener, "log", logger);
     }
 
     @Test
@@ -205,5 +214,50 @@ class PaymentLedgerListenerTest {
                 anyString(),
                 eq(LedgerEntryType.PAYMENT_RECEIVED)
         );
+    }
+
+    // --- Tests for Idempotency ---
+
+    @Test
+    void handlePaymentProcessedEvent_whenEventNotProcessed_shouldPostTransactionAndLogSuccess() {
+        // Arrange
+        PaymentProcessedEvent event = new PaymentProcessedEvent(this, paymentId, invoiceId, amountPaid, PaymentStatus.COMPLETED, InvoiceStatus.PAID, responsibleId);
+        when(ledgerEntryRepository.existsByPaymentIdAndType(paymentId, LedgerEntryType.PAYMENT_RECEIVED)).thenReturn(false);
+        when(paymentRepository.findById(paymentId)).thenReturn(Optional.of(payment));
+        when(invoiceRepository.findById(invoiceId)).thenReturn(Optional.of(invoice));
+        when(responsibleRepository.findById(responsibleId)).thenReturn(Optional.of(responsible));
+        when(accountService.findOrCreateAccount(anyString(), any(AccountType.class), isNull())).thenReturn(cashAccount);
+        when(accountService.findOrCreateResponsibleARAccount(responsibleId)).thenReturn(arAccount);
+
+        // Act
+        listener.handlePaymentProcessedEvent(event);
+
+        // Assert
+        verify(ledgerService).postTransaction(
+                eq(invoice),
+                eq(payment),
+                eq(cashAccount),
+                eq(arAccount),
+                eq(amountPaid),
+                any(LocalDateTime.class), // Date might be set to now() if payment.getPaymentDate() is null
+                anyString(),
+                eq(LedgerEntryType.PAYMENT_RECEIVED)
+        );
+        verify(logger).info("PaymentLedgerListener: Successfully posted ledger entries for Payment ID: {}", paymentId);
+    }
+
+    @Test
+    void handlePaymentProcessedEvent_whenEventAlreadyProcessed_shouldSkipAndLogInfo() {
+        // Arrange
+        PaymentProcessedEvent event = new PaymentProcessedEvent(this, paymentId, invoiceId, amountPaid, PaymentStatus.COMPLETED, InvoiceStatus.PAID, responsibleId);
+        when(ledgerEntryRepository.existsByPaymentIdAndType(paymentId, LedgerEntryType.PAYMENT_RECEIVED)).thenReturn(true);
+
+        // Act
+        listener.handlePaymentProcessedEvent(event);
+
+        // Assert
+        verify(ledgerService, never()).postTransaction(any(), any(), any(), any(), any(), any(), any(), any());
+        verify(logger).info("PaymentProcessedEvent for Payment ID: {} has already been processed. Skipping.", paymentId);
+        verify(logger, never()).error(anyString(), anyString(), anyString(), anyString(), anyString(), any(Throwable.class)); // Ensure no error was logged
     }
 }

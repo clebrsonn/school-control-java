@@ -9,6 +9,7 @@ import br.com.hyteck.school_control.repositories.ClassroomRepository;
 import br.com.hyteck.school_control.repositories.EnrollmentRepository;
 import br.com.hyteck.school_control.repositories.InvoiceRepository;
 import br.com.hyteck.school_control.repositories.StudentRepository;
+import br.com.hyteck.school_control.events.StudentEnrolledEvent; // Added import
 import br.com.hyteck.school_control.web.dtos.classroom.EnrollmentRequest;
 import br.com.hyteck.school_control.events.InvoiceCreatedEvent; // Added import
 import br.com.hyteck.school_control.web.dtos.classroom.EnrollmentResponse;
@@ -82,6 +83,17 @@ public class CreateEnrollment {
         newEnrollment.validateEnrollmentRules(enrollmentRepository);
         Enrollment savedEnrollment = enrollmentRepository.save(newEnrollment);
         log.info("Matrícula criada com sucesso. ID: {}", savedEnrollment.getId());
+
+        // Publish StudentEnrolledEvent
+        StudentEnrolledEvent studentEnrolledEvent = new StudentEnrolledEvent(
+                this,
+                savedEnrollment.getId(),
+                savedEnrollment.getStudent().getId(),
+                savedEnrollment.getClassroom().getId(),
+                LocalDate.now() // Or savedEnrollment.getCreatedAt().toLocalDate() if available
+        );
+        eventPublisher.publishEvent(studentEnrolledEvent);
+        log.info("Published StudentEnrolledEvent for enrollment ID {}", savedEnrollment.getId());
 
         if (requestDTO.enrollmentFee() != null && requestDTO.enrollmentFee().compareTo(BigDecimal.ZERO) > 0) {
             createAndSaveEnrollmentFeeInvoice(savedEnrollment, requestDTO.enrollmentFee(), student.getResponsible());

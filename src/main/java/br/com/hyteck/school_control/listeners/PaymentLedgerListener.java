@@ -10,6 +10,7 @@ import br.com.hyteck.school_control.models.payments.Responsible;
 import br.com.hyteck.school_control.repositories.InvoiceRepository;
 import br.com.hyteck.school_control.repositories.PaymentRepository;
 import br.com.hyteck.school_control.repositories.ResponsibleRepository;
+import br.com.hyteck.school_control.repositories.financial.LedgerEntryRepository;
 import br.com.hyteck.school_control.services.financial.AccountService;
 import br.com.hyteck.school_control.services.financial.LedgerService;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +34,7 @@ public class PaymentLedgerListener {
     private final InvoiceRepository invoiceRepository;
     private final PaymentRepository paymentRepository;
     private final ResponsibleRepository responsibleRepository;
+    private final LedgerEntryRepository ledgerEntryRepository;
 
 
     @EventListener
@@ -42,6 +44,12 @@ public class PaymentLedgerListener {
                 event.getPaymentId(), event.getInvoiceId(), event.getAmountPaid());
 
         try {
+            // Idempotency check
+            if (ledgerEntryRepository.existsByPaymentIdAndType(event.getPaymentId(), LedgerEntryType.PAYMENT_RECEIVED)) {
+                log.info("PaymentProcessedEvent for Payment ID: {} has already been processed. Skipping.", event.getPaymentId());
+                return;
+            }
+
             // Fetch entities based on IDs from the event
             Payment payment = paymentRepository.findById(event.getPaymentId())
                     .orElseThrow(() -> new RuntimeException("Payment not found for ID: " + event.getPaymentId())); // Consider specific exception
