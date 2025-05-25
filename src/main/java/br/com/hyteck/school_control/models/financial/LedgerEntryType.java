@@ -48,6 +48,12 @@ public enum LedgerEntryType {
     OPENING_BALANCE,
 
     /**
+     * Represents the initial charge for an enrollment fee.
+     * Typically, a debit to Accounts Receivable and a credit to Enrollment Fee Revenue.
+     */
+    ENROLLMENT_FEE_CHARGED,
+
+    /**
      * Represents a year-end closing entry, typically to close out revenue and expense accounts
      * to retained earnings or another equity account.
      */

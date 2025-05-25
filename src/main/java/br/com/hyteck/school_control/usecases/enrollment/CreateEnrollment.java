@@ -10,9 +10,11 @@ import br.com.hyteck.school_control.repositories.EnrollmentRepository;
 import br.com.hyteck.school_control.repositories.InvoiceRepository;
 import br.com.hyteck.school_control.repositories.StudentRepository;
 import br.com.hyteck.school_control.web.dtos.classroom.EnrollmentRequest;
+import br.com.hyteck.school_control.events.InvoiceCreatedEvent; // Added import
 import br.com.hyteck.school_control.web.dtos.classroom.EnrollmentResponse;
 import jakarta.validation.Valid;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.context.ApplicationEventPublisher; // Added import
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
@@ -30,14 +32,18 @@ public class CreateEnrollment {
     private final StudentRepository studentRepository;
     private final ClassroomRepository classRoomRepository;
     private final InvoiceRepository invoiceRepository;
+    private final ApplicationEventPublisher eventPublisher; // Added field
 
     public CreateEnrollment(EnrollmentRepository enrollmentRepository,
                             StudentRepository studentRepository,
-                            ClassroomRepository classRoomRepository, InvoiceRepository invoiceRepository) {
+                            ClassroomRepository classRoomRepository,
+                            InvoiceRepository invoiceRepository,
+                            ApplicationEventPublisher eventPublisher) { // Added eventPublisher parameter
         this.enrollmentRepository = enrollmentRepository;
         this.studentRepository = studentRepository;
         this.classRoomRepository = classRoomRepository;
         this.invoiceRepository = invoiceRepository;
+        this.eventPublisher = eventPublisher; // Assign to field
     }
 
     @Transactional
@@ -111,8 +117,12 @@ public class CreateEnrollment {
         feeInvoice.addItem(feeItem);
         feeInvoice.setAmount(feeInvoice.calculateAmount());
 
-        invoiceRepository.save(feeInvoice); // Salva a fatura (e o item por cascata)
-        log.info("Fatura da taxa de matrícula ID {} criada para enrollment {}", feeInvoice.getId(), enrollment.getId());
+        Invoice savedInvoice = invoiceRepository.save(feeInvoice); // Salva a fatura e captura a instância salva
+        log.info("Fatura da taxa de matrícula ID {} criada para enrollment {}", savedInvoice.getId(), enrollment.getId());
+
+        // Publish InvoiceCreatedEvent
+        eventPublisher.publishEvent(new InvoiceCreatedEvent(this, savedInvoice));
+        log.info("Published InvoiceCreatedEvent for invoice ID {}", savedInvoice.getId());
     }
 
 }
