@@ -18,6 +18,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
+import java.math.BigDecimal;
+
 /**
  * Service responsible for creating a new student entity.
  * Validates for duplicates, associates the responsible, persists the student, and creates the enrollment.
@@ -98,8 +100,8 @@ public class CreateStudent {
                 savedStudent.getId(),
                 requestDTO.classroom(),
                 requestDTO.className(),
-                requestDTO.enrollmentFee(),
-                requestDTO.monthyFee()
+                requestDTO.enrollmentFee()==null || BigDecimal.ZERO.compareTo(requestDTO.enrollmentFee())==0 ? BigDecimal.valueOf(30) : requestDTO.enrollmentFee(),
+                requestDTO.monthyFee()==null || BigDecimal.ZERO.compareTo(requestDTO.monthyFee())==0  ? BigDecimal.valueOf(110) : requestDTO.monthyFee()
         ));
         logger.info("Enrollment created for student: {}", savedStudent.getName());
 

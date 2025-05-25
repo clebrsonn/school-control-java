@@ -1,29 +1,27 @@
 package br.com.hyteck.school_control.usecases.billing;
 
+import br.com.hyteck.school_control.events.InvoiceCreatedEvent;
 import br.com.hyteck.school_control.models.classrooms.Enrollment;
-import br.com.hyteck.school_control.events.InvoiceCreatedEvent; // Added import
 import br.com.hyteck.school_control.models.payments.*;
 import br.com.hyteck.school_control.repositories.DiscountRepository;
 import br.com.hyteck.school_control.repositories.EnrollmentRepository;
 import br.com.hyteck.school_control.repositories.InvoiceRepository;
-// import br.com.hyteck.school_control.services.financial.AccountService; // Removed import
-// import br.com.hyteck.school_control.services.financial.LedgerService; // Removed import
 import br.com.hyteck.school_control.usecases.notification.CreateNotification;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.springframework.context.ApplicationEventPublisher; // Added import
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.time.LocalDate;
-// import java.time.LocalDateTime; // Removed import - was only for ledgerService
 import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Use case responsible for generating monthly invoices for parents/responsibles
@@ -155,7 +153,7 @@ public class GenerateInvoicesForParents {
                 // Calculate total discount amount for this invoice based on its items and applicable discounts.
                 // This is a simplified example. Real discount logic might be more complex.
                 // For this example, we'll use the previously fetched monthlyFeeDiscount if more than one item exists.
-                BigDecimal totalDiscountAmount = BigDecimal.ZERO;
+                AtomicReference<BigDecimal> totalDiscountAmount = new AtomicReference<>(BigDecimal.ZERO);
                 if (invoice.getItems().size() > 1) { // Condition for applying discount
                         // This is a placeholder for actual discount calculation logic.
                         // Assuming discount is a fixed amount or percentage of the first item, etc.
@@ -175,36 +173,34 @@ public class GenerateInvoicesForParents {
                         // we apply its fixedValue if not null, otherwise percentage of the originalAmount.
                         // This is a placeholder for potentially complex discount rules.
 
-                        Discount actualDiscount = monthlyFeeDiscount.get();
-                        // The variable totalDiscountAmount will still be used for the separate ledger posting in this subtask.
-                        if (actualDiscount.getValue() != null && actualDiscount.getValue().compareTo(BigDecimal.ZERO) > 0) {
-                            totalDiscountAmount = actualDiscount.getValue();
+                        //Discount actualDiscount = monthlyFeeDiscount.get();
+                        monthlyFeeDiscount.ifPresent(discount -> {
+                            totalDiscountAmount.set(discount.getValue());
                             log.info("Calculated fixed discount amount {} for responsible {} from policy: {}",
-                                    CURRENCY_FORMATTER.format(totalDiscountAmount), responsible.getName(), actualDiscount.getDescription());
-                        }
+                                    CURRENCY_FORMATTER.format(totalDiscountAmount), responsible.getName(), discount.getDescription());
+                            if (totalDiscountAmount.get().compareTo(BigDecimal.ZERO) > 0) {
+                                InvoiceItem discountItem = InvoiceItem.builder()
+                                        .type(Types.DESCONTO)
+                                        .description(discount.getName() != null && !discount.getName().isBlank() ? discount.getName() : discount.getDescription())
+                                        .amount(totalDiscountAmount.get().negate()) // Negative amount for discount
+                                        .build();
+                                invoice.addItem(discountItem); // Add the discount item to the invoice
+                                log.info("Added itemized discount '{}' of {} to invoice for responsible {}",
+                                        discountItem.getDescription(), CURRENCY_FORMATTER.format(discountItem.getAmount()), responsible.getName());
 
-                        if (totalDiscountAmount.compareTo(BigDecimal.ZERO) > 0) {
-                            InvoiceItem discountItem = InvoiceItem.builder()
-                                    .type(Types.DESCONTO)
-                                    .description(actualDiscount.getName() != null && !actualDiscount.getName().isBlank() ? actualDiscount.getName() : actualDiscount.getDescription())
-                                    .amount(totalDiscountAmount.negate()) // Negative amount for discount
-                                    .enrollment(null) // Discount item is not tied to a specific enrollment
-                                    .build();
-                            invoice.addItem(discountItem); // Add the discount item to the invoice
-                            log.info("Added itemized discount '{}' of {} to invoice for responsible {}",
-                                    discountItem.getDescription(), CURRENCY_FORMATTER.format(discountItem.getAmount()), responsible.getName());
-                            
-                            // Update originalAmount to reflect NET amount after discount item is added.
-                            invoice.calculateAmount();
-                            log.info("Invoice amount for responsible {} (ID: {}) updated to NET {} after itemized discount.",
-                                    responsible.getName(), invoice.getId(), CURRENCY_FORMATTER.format(invoice.calculateAmount()));
-                        }
+                                // Update originalAmount to reflect NET amount after discount item is added.
+                                log.info("Invoice amount for responsible {} (ID: {}) updated to NET {} after itemized discount.",
+                                        responsible.getName(), invoice.getId(), CURRENCY_FORMATTER.format(invoice.calculateAmount()));
+                            }
+
+                        });
+
                 }
                 // If no discount was applied, invoice.getOriginalAmount() remains the gross sum of MENSALIDADE items.
                 // If a discount was applied, invoice.getOriginalAmount() is now NET.
                 // The existing totalDiscountAmount variable will be used for the separate DISCOUNT_APPLIED ledger posting (as per subtask constraints).
 
-
+                invoice.updateAmount();
                 Invoice savedInvoice = invoiceRepository.save(invoice);
                 log.info("Saved invoice ID {} for responsible {}", savedInvoice.getId(), responsible.getName());
 
@@ -214,7 +210,7 @@ public class GenerateInvoicesForParents {
 
                 // Send notifications to responsibles about the new invoices.
                 // Ensure the responsible has an associated user account for notifications.
-                if (responsible.getId() == null) {
+                if (responsible.getUsername() == null) {
                     log.warn("Responsible ID {} (Name: {}) has no associated user account. Cannot send notification for invoice ID {}.",
                             responsible.getId(), responsible.getName(), savedInvoice.getId());
                     // Continue to next invoice or responsible, notification is not critical for financial transaction

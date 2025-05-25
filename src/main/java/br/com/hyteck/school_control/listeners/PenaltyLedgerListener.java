@@ -36,7 +36,7 @@ public class PenaltyLedgerListener {
     @Transactional
     public void handlePenaltyAssessedEvent(PenaltyAssessedEvent event) {
         log.info("PenaltyLedgerListener: Received PenaltyAssessedEvent for Invoice ID: {}, Amount: {}, Responsible ID: {}",
-                event.getInvoiceId(), event.getPenaltyAmount(), event.getResponsibleId());
+                event.getInvoiceId(), event.getPenaltyAmount(), event.getResponsibleUserId());
 
         try {
             String invoiceIdStr = event.getInvoiceId().toString();
@@ -48,7 +48,7 @@ public class PenaltyLedgerListener {
             }
 
             // Convert UUIDs from event to String for repository lookup.
-            String responsibleIdStr = event.getResponsibleId().toString();
+            String responsibleIdStr = event.getResponsibleUserId().toString();
 
             Invoice invoice = invoiceRepository.findById(invoiceIdStr)
                     .orElseThrow(() -> new RuntimeException("Invoice not found for ID: " + invoiceIdStr)); // Consider specific exception

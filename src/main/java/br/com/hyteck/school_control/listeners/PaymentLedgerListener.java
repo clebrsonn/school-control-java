@@ -59,8 +59,8 @@ public class PaymentLedgerListener {
 
             // Assuming responsibleId is directly on the event. If not, might need to get from invoice.getResponsible().getId()
             // For this implementation, sticking to the event structure assumption.
-            Responsible responsible = responsibleRepository.findById(event.getResponsibleId()) 
-                    .orElseThrow(() -> new RuntimeException("Responsible not found for ID: " + event.getResponsibleId())); // Consider specific exception
+            Responsible responsible = responsibleRepository.findById(event.getResponsibleUserId())
+                    .orElseThrow(() -> new RuntimeException("Responsible not found for ID: " + event.getResponsibleUserId())); // Consider specific exception
             
             // Determine accounts
             Account cashOrBankClearingAccount = accountService.findOrCreateAccount("Cash/Bank Clearing", AccountType.ASSET, null);
@@ -70,8 +70,6 @@ public class PaymentLedgerListener {
             String paymentMethodName = "N/A";
             if (payment.getPaymentMethod() != null) {
                 paymentMethodName = payment.getPaymentMethod().name(); // Assuming PaymentMethod is an enum
-            } else if (payment.getMethod() != null && !payment.getMethod().isBlank()){
-                 paymentMethodName = payment.getMethod(); // Assuming there's a string field 'method' as fallback
             }
 
             String description = String.format("Payment %s received for Invoice #%s via %s",
@@ -99,7 +97,7 @@ public class PaymentLedgerListener {
             // Log the error with event details for traceability
             log.error("PaymentLedgerListener: Failed to process PaymentProcessedEvent for Payment ID: {}. Error: {} " + 
                       "- Invoice ID: {}, Responsible ID: {}, Amount: {}",
-                    event.getPaymentId(), e.getMessage(), event.getInvoiceId(), event.getResponsibleId(), event.getAmountPaid(), e);
+                    event.getPaymentId(), e.getMessage(), event.getInvoiceId(), event.getResponsibleUserId(), event.getAmountPaid(), e);
             // Re-throwing the exception ensures the transaction is rolled back
             // and allows for further handling by the Spring event publishing mechanism if configured.
             throw e; 
