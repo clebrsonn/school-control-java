@@ -7,28 +7,39 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+/**
+ * Service implementation for loading user-specific data for Spring Security.
+ * This class implements the {@link UserDetailsService} interface, which is used
+ * by Spring Security to handle user authentication and authorization.
+ */
 @Service
 @RequiredArgsConstructor
 public class UserDetailServiceImpl implements UserDetailsService {
 
     private final UserRepository userRepository;
 
+
     /**
-     * Locates the user based on the username. In the actual implementation, the search
-     * may be case-sensitive, or case-insensitive depending on how the
-     * implementation instance is configured. In this case, the <code>UserDetails</code>
-     * object that comes back may have a username that is of a different case than what
-     * was actually requested.
+     * Loads a user by their username from the {@link UserRepository}.
+     * This method is called by Spring Security during the authentication process.
      *
-     * @param username the username identifying the user whose data is required.
-     * @return a fully populated user record (never <code>null</code>)
-     * @throws UsernameNotFoundException if the user could not be found or the user has no
-     *                                   GrantedAuthority
+     * @param username The username (login) of the user to load.
+     * @return A {@link UserDetails} object representing the user, which includes their username,
+     *         password (hashed), authorities (roles), and account status.
+     * @throws UsernameNotFoundException If no user is found with the given username.
      */
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        return userRepository.findByUsername(username).orElseThrow(()-> new UsernameNotFoundException("User not found :- " + username)
-        );
-
+        // Attempt to find the user by their username in the repository.
+        // The User model itself should implement UserDetails.
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> {
+                    // If the user is not found, throw UsernameNotFoundException,
+                    // which is a standard Spring Security exception.
+                    String errorMessage = "User not found with username: " + username;
+                    // It's good practice to log this event as well.
+                    // logger.warn(errorMessage); // Assuming a logger is available
+                    return new UsernameNotFoundException(errorMessage);
+                });
     }
 }

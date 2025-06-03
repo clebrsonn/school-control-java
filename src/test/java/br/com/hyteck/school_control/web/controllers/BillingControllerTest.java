@@ -1,105 +1,168 @@
 package br.com.hyteck.school_control.web.controllers;
 
+import br.com.hyteck.school_control.models.payments.InvoiceStatus;
 import br.com.hyteck.school_control.services.InvoiceCalculationService;
 import br.com.hyteck.school_control.usecases.billing.CountInvoicesByStatus;
 import br.com.hyteck.school_control.usecases.billing.GenerateConsolidatedStatementUseCase;
 import br.com.hyteck.school_control.usecases.billing.GenerateInvoicesForParents;
 import br.com.hyteck.school_control.web.dtos.billing.ConsolidatedStatement;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.tags.Tag;
+import br.com.hyteck.school_control.web.dtos.billing.StatementLineItem;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.context.WebApplicationContext;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@ExtendWith(SpringExtension.class)
+@WebMvcTest(BillingController.class)
 class BillingControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private WebApplicationContext webApplicationContext;
+
+    @MockitoBean
     private GenerateConsolidatedStatementUseCase generateStatementUseCase;
-    private GenerateInvoicesForParents generateInvoicesForParents;
-    private CountInvoicesByStatus countInvoicesByStatus;
+    @MockitoBean
+    private GenerateInvoicesForParents generateInvoicesForParentsUseCase;
+    @MockitoBean
+    private CountInvoicesByStatus countInvoicesByStatusUseCase;
+    @MockitoBean
     private InvoiceCalculationService invoiceCalculationService;
-    private BillingController billingController;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    private ConsolidatedStatement consolidatedStatement;
+    private YearMonth testYearMonth;
 
     @BeforeEach
     void setUp() {
-        generateStatementUseCase = mock(GenerateConsolidatedStatementUseCase.class);
-        generateInvoicesForParents = mock(GenerateInvoicesForParents.class);
-        countInvoicesByStatus = mock(CountInvoicesByStatus.class);
-        invoiceCalculationService = mock(InvoiceCalculationService.class);
-        billingController = new BillingController(
-                generateStatementUseCase,
-                generateInvoicesForParents,
-                countInvoicesByStatus,
-                invoiceCalculationService
+        mockMvc = MockMvcBuilders
+                .webAppContextSetup(webApplicationContext)
+                .apply(springSecurity())
+                .build();
+
+        testYearMonth = YearMonth.of(2023, 10);
+        StatementLineItem item = new StatementLineItem("inv1", "Student A", "Monthly Fee", new BigDecimal("100"), LocalDate.now());
+        consolidatedStatement = new ConsolidatedStatement(
+                "respId1", "Responsible Name", testYearMonth, new BigDecimal("100.00"),
+                LocalDate.now().plusDays(10), List.of(item), "http://payment.link", "barcode123"
         );
     }
 
     @Test
-    void getConsolidatedStatementForResponsible_shouldReturnStatement_whenExists() {
-        ConsolidatedStatement statement = mock(ConsolidatedStatement.class);
-        when(generateStatementUseCase.execute(eq("resp1"), any(YearMonth.class)))
-                .thenReturn(Optional.of(statement));
-        ResponseEntity<ConsolidatedStatement> response = billingController.getConsolidatedStatementForResponsible("resp1", YearMonth.of(2025, 5));
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(statement, response.getBody());
+    @WithMockUser // Assumes any authenticated user can access this, or adjust roles if needed
+    void getConsolidatedStatementForResponsible_ShouldReturnStatement_WhenFound() throws Exception {
+        when(generateStatementUseCase.execute("respId1", testYearMonth)).thenReturn(Optional.of(consolidatedStatement));
+
+        mockMvc.perform(get("/billing/responsibles/{responsibleId}/statements/{yearMonth}", "respId1", testYearMonth.toString())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.responsibleId").value("respId1"))
+                .andExpect(jsonPath("$.totalAmountDue").value(100.00));
+
+        verify(generateStatementUseCase).execute("respId1", testYearMonth);
     }
 
     @Test
-    void getConsolidatedStatementForResponsible_shouldReturnNotFound_whenNotExists() {
-        when(generateStatementUseCase.execute(eq("resp1"), any(YearMonth.class)))
-                .thenReturn(Optional.empty());
-        ResponseEntity<ConsolidatedStatement> response = billingController.getConsolidatedStatementForResponsible("resp1", YearMonth.of(2025, 5));
-        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+    @WithMockUser
+    void getConsolidatedStatementForResponsible_ShouldReturnNotFound_WhenNotFound() throws Exception {
+        when(generateStatementUseCase.execute("respId1", testYearMonth)).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/billing/responsibles/{responsibleId}/statements/{yearMonth}", "respId1", testYearMonth.toString())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound());
+
+        verify(generateStatementUseCase).execute("respId1", testYearMonth);
     }
 
     @Test
-    void getConsolidatedStatement_shouldReturnList() {
-        ConsolidatedStatement statement = mock(ConsolidatedStatement.class);
-        when(generateStatementUseCase.execute(any(YearMonth.class)))
-                .thenReturn(List.of(statement));
-        ResponseEntity<List<ConsolidatedStatement>> response = billingController.getConsolidatedStatement(YearMonth.of(2025, 5));
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(1, response.getBody().size());
+    @WithMockUser // Assumes any authenticated user can access this
+    void getConsolidatedStatement_ShouldReturnListOfStatements() throws Exception {
+        List<ConsolidatedStatement> statements = Collections.singletonList(consolidatedStatement);
+        when(generateStatementUseCase.execute(testYearMonth)).thenReturn(statements);
+
+        mockMvc.perform(get("/billing/statements/{yearMonth}", testYearMonth.toString())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].responsibleId").value("respId1"));
+
+        verify(generateStatementUseCase).execute(testYearMonth);
     }
 
     @Test
-    void triggerGenerateMonthlyInvoices_shouldReturnAccepted() {
-        ResponseEntity<Void> response = billingController.triggerGenerateMonthlyInvoices(YearMonth.of(2025, 5));
-        assertEquals(HttpStatus.ACCEPTED, response.getStatusCode());
-        verify(generateInvoicesForParents).execute(any(YearMonth.class));
+    @WithMockUser(roles = {"ADMIN"})
+    void triggerGenerateMonthlyInvoices_ShouldReturnAccepted_WhenUserIsAdmin() throws Exception {
+        doNothing().when(generateInvoicesForParentsUseCase).execute(testYearMonth);
+
+        mockMvc.perform(post("/billing/generate-monthly-invoices/{yearMonth}", testYearMonth.toString())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isAccepted());
+
+        verify(generateInvoicesForParentsUseCase).execute(testYearMonth);
+    }
+    
+    @Test
+    @WithMockUser(roles = {"USER"}) // Non-admin user
+    void triggerGenerateMonthlyInvoices_ShouldReturnForbidden_WhenUserIsNotAdmin() throws Exception {
+        mockMvc.perform(post("/billing/generate-monthly-invoices/{yearMonth}", testYearMonth.toString())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(generateInvoicesForParentsUseCase);
+    }
+
+
+    @Test
+    @WithMockUser(roles = {"ADMIN"})
+    void countInvoicesByStatus_ShouldReturnCount_WhenUserIsAdmin() throws Exception {
+        InvoiceStatus status = InvoiceStatus.PENDING;
+        long count = 15L;
+        when(countInvoicesByStatusUseCase.execute(status)).thenReturn(count);
+
+        mockMvc.perform(get("/billing/invoices/{status}/count", status.name())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(content().string(String.valueOf(count)));
+
+        verify(countInvoicesByStatusUseCase).execute(status);
     }
 
     @Test
-    void countInvoicesByStatus_shouldReturnCount() {
-        when(countInvoicesByStatus.execute(any())).thenReturn(5L);
-        ResponseEntity<Long> response = billingController.countInvoicesByStatus(br.com.hyteck.school_control.models.payments.InvoiceStatus.PENDING);
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(5L, response.getBody());
-    }
+    @WithMockUser // Assuming any authenticated user can access this, adjust if ADMIN only
+    void getTotalToReceive_ShouldReturnTotalAmount() throws Exception {
+        BigDecimal total = new BigDecimal("2500.50");
+        when(invoiceCalculationService.calcularTotalAReceberNoMes(testYearMonth)).thenReturn(total);
 
-    @Test
-    void getTotalToReceive_shouldReturnTotal() {
-        when(invoiceCalculationService.calcularTotalAReceberNoMes(any(YearMonth.class))).thenReturn(BigDecimal.TEN);
-        ResponseEntity<BigDecimal> response = billingController.getTotalToReceive(YearMonth.of(2025, 5));
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(BigDecimal.TEN, response.getBody());
+        mockMvc.perform(get("/billing/total-month/{referenceMonth}", testYearMonth.toString())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").value(total.doubleValue()));
+
+        verify(invoiceCalculationService).calcularTotalAReceberNoMes(testYearMonth);
     }
 }
-
