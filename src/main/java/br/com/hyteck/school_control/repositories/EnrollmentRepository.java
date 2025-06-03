@@ -10,7 +10,6 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
-@Repository
 public interface EnrollmentRepository extends JpaRepository<Enrollment, String> { // Assume ID String
     List<Enrollment> findByStudentId(String studentId);
 
