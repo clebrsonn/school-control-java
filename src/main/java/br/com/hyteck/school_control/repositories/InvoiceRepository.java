@@ -123,4 +123,7 @@ public interface InvoiceRepository extends JpaRepository<Invoice, String> {
      * @return the count of invoices with the given status
      */
     long countByStatus(InvoiceStatus status);
+
+    @Query("SELECT item FROM Invoice inv JOIN inv.items item WHERE item.id = :invoiceItemId")
+    br.com.hyteck.school_control.models.payments.InvoiceItem findInvoiceItemById(@Param("invoiceItemId") String invoiceItemId);
 }
