@@ -76,7 +76,7 @@ public class Enrollment extends AbstractModel {
         });
         // c) (Opcional) Verificar limite de vagas na turma?
         // int maxCapacity = 30; // Exemplo, poderia vir da turma ou configuração
-        // int currentEnrollments = enrollmentRepository.countByClassroomId(classRoom.getId()); // Método a criar
+        // int currentEnrollments = enrollmentRepository.countByClassroomId(classRoom.getId());
         // if (currentEnrollments >= maxCapacity) {
         //     throw new BusinessRuleException("A turma '" + classRoom.getName() + "' atingiu a capacidade máxima.");
         // }
