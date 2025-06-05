@@ -1,15 +1,16 @@
 package br.com.hyteck.school_control.web.controllers;
 
 import br.com.hyteck.school_control.usecases.enrollment.CreateEnrollment;
+import br.com.hyteck.school_control.models.classrooms.Enrollment; // Added for entity type
+import br.com.hyteck.school_control.usecases.enrollment.CreateEnrollment;
 import br.com.hyteck.school_control.usecases.enrollment.FindEnrollmentsByStudentId;
+import br.com.hyteck.school_control.usecases.enrollment.UpdateEnrollmentMonthlyFee; // Added
 import br.com.hyteck.school_control.web.dtos.classroom.EnrollmentRequest;
 import br.com.hyteck.school_control.web.dtos.classroom.EnrollmentResponse;
-import br.com.hyteck.school_control.models.payments.InvoiceItem;
-import br.com.hyteck.school_control.services.InvoiceService;
-import br.com.hyteck.school_control.web.dtos.invoice.InvoiceItemResponseDto;
-import br.com.hyteck.school_control.web.dtos.invoice.InvoiceItemUpdateRequestDto;
+import br.com.hyteck.school_control.web.dtos.classroom.UpdateEnrollmentMonthlyFeeRequestDto;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.Content;
+// Removed Content for updateInvoiceItemAmount, ensure it's present for updateMonthlyFee
+import io.swagger.v3.oas.annotations.media.Content; // Ensure this is present
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
@@ -29,7 +30,7 @@ public class EnrollmentController {
 
     private final CreateEnrollment createEnrollmentUseCase;
     private final FindEnrollmentsByStudentId findEnrollmentsByStudentId;
-    private final InvoiceService invoiceService;
+    private final UpdateEnrollmentMonthlyFee updateEnrollmentMonthlyFeeUseCase; // Added
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -58,41 +59,26 @@ public class EnrollmentController {
         }
     }
 
-    @PatchMapping("/{enrollmentId}/invoice-items/{itemId}")
-    @Operation(summary = "Update an invoice item's amount for a specific enrollment",
-            description = "Updates the financial amount of a specific item associated with an enrollment's invoice line items.",
+    // Removed the erroneous updateInvoiceItemAmount method and its imports/annotations
+
+    @PatchMapping("/{enrollmentId}/monthly-fee")
+    @Operation(summary = "Update enrollment monthly fee",
+            description = "Updates the monthly fee for a specific enrollment.",
             responses = {
-                    @ApiResponse(responseCode = "200", description = "Invoice item updated successfully",
+                    @ApiResponse(responseCode = "200", description = "Monthly fee updated successfully",
                             content = @Content(mediaType = "application/json",
-                                    schema = @Schema(implementation = InvoiceItemResponseDto.class))),
-                    @ApiResponse(responseCode = "400", description = "Invalid input data",
+                                    schema = @Schema(implementation = EnrollmentResponse.class))),
+                    @ApiResponse(responseCode = "400", description = "Invalid input data (e.g., negative fee)",
                             content = @Content),
-                    @ApiResponse(responseCode = "404", description = "Invoice item not found",
+                    @ApiResponse(responseCode = "404", description = "Enrollment not found",
                             content = @Content)
             })
-    public ResponseEntity<InvoiceItemResponseDto> updateInvoiceItemAmount(
+    public ResponseEntity<EnrollmentResponse> updateMonthlyFee(
             @PathVariable String enrollmentId,
-            @PathVariable String itemId,
-            @Valid @RequestBody InvoiceItemUpdateRequestDto requestDto) {
+            @Valid @RequestBody UpdateEnrollmentMonthlyFeeRequestDto requestDto) {
 
-        // enrollmentId is available for future use (e.g., validation, logging)
-        // For now, the service call remains the same as it was in InvoiceController
-        InvoiceItem updatedInvoiceItem = invoiceService.updateInvoiceItemAmount(itemId, requestDto.getNewAmount());
-        InvoiceItemResponseDto responseDto = mapToInvoiceItemResponseDto(updatedInvoiceItem);
+        Enrollment updatedEnrollmentEntity = updateEnrollmentMonthlyFeeUseCase.execute(enrollmentId, requestDto.getMonthlyFee());
+        EnrollmentResponse responseDto = EnrollmentResponse.from(updatedEnrollmentEntity); // Using existing static factory method
         return ResponseEntity.ok(responseDto);
-    }
-
-    // Manual mapper
-    private InvoiceItemResponseDto mapToInvoiceItemResponseDto(InvoiceItem invoiceItem) {
-        if (invoiceItem == null) {
-            return null;
-        }
-        return InvoiceItemResponseDto.builder()
-                .id(invoiceItem.getId())
-                .description(invoiceItem.getDescription())
-                .amount(invoiceItem.getAmount())
-                .type(invoiceItem.getType())
-                .enrollmentId(invoiceItem.getEnrollment() != null ? invoiceItem.getEnrollment().getId() : null)
-                .build();
     }
 }

@@ -39,10 +39,10 @@ public class InvoiceItem extends AbstractModel {
     // private String sourceId;   // Ex: ID do Enrollment, ID da Fee, ID do Product
 
     // Métodos utilitários, se necessário
-    public void updateAmount(BigDecimal newAmount) {
-        if (newAmount == null || newAmount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("New amount cannot be null or non-positive");
-        }
-        this.amount = newAmount;
-    }
+    // public void updateAmount(BigDecimal newAmount) { // Removed
+    //     if (newAmount == null || newAmount.compareTo(BigDecimal.ZERO) <= 0) {
+    //         throw new IllegalArgumentException("New amount cannot be null or non-positive");
+    //     }
+    //     this.amount = newAmount;
+    // }
 }

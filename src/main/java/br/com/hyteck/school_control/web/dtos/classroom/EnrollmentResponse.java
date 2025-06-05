@@ -2,8 +2,11 @@ package br.com.hyteck.school_control.web.dtos.classroom;
 
 import br.com.hyteck.school_control.models.classrooms.ClassRoom;
 import br.com.hyteck.school_control.models.classrooms.Enrollment;
+import br.com.hyteck.school_control.models.classrooms.ClassRoom;
+import br.com.hyteck.school_control.models.classrooms.Enrollment;
 import br.com.hyteck.school_control.models.classrooms.Student;
 
+import java.math.BigDecimal; // Added
 import java.time.LocalDateTime;
 
 /**
@@ -16,6 +19,7 @@ public record EnrollmentResponse(
         String classRoomId,
         String classRoomName,
         String classRoomYear,
+        BigDecimal monthlyFee, // Added
         LocalDateTime enrollmentDate,
         LocalDateTime endDate,
         String status
@@ -33,10 +37,10 @@ public record EnrollmentResponse(
                 classRoom != null ? classRoom.getId() : null,
                 classRoom != null ? classRoom.getName() : null,
                 classRoom != null ? classRoom.getYear() : null,
+                enrollment.getMonthlyFee(), // Added
                 enrollment.getStartDate(),
                 enrollment.getEndDate(),
                 enrollment.getStatus().name()
-
         );
     }
 }

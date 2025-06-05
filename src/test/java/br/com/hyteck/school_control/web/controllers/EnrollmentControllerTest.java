@@ -1,120 +1,150 @@
 package br.com.hyteck.school_control.web.controllers;
 
+// Removed ResourceNotFoundException, InvoiceItem, Types, InvoiceService, InvoiceItemUpdateRequestDto related imports
 import br.com.hyteck.school_control.exceptions.ResourceNotFoundException;
-import br.com.hyteck.school_control.models.payments.InvoiceItem;
-import br.com.hyteck.school_control.models.payments.Types;
-import br.com.hyteck.school_control.services.InvoiceService;
+import br.com.hyteck.school_control.models.classrooms.Enrollment;
+import br.com.hyteck.school_control.models.classrooms.Student; // For building Enrollment
+import br.com.hyteck.school_control.models.classrooms.ClassRoom; // For building Enrollment
 import br.com.hyteck.school_control.usecases.enrollment.CreateEnrollment;
 import br.com.hyteck.school_control.usecases.enrollment.FindEnrollmentsByStudentId;
-import br.com.hyteck.school_control.web.dtos.invoice.InvoiceItemUpdateRequestDto;
+import br.com.hyteck.school_control.usecases.enrollment.UpdateEnrollmentMonthlyFee; // Added
+import br.com.hyteck.school_control.web.dtos.classroom.UpdateEnrollmentMonthlyFeeRequestDto; // Added
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Test; // Added
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.MediaType;
+import org.springframework.http.MediaType; // Added
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.math.BigDecimal;
+import java.math.BigDecimal; // Added
+import java.time.LocalDateTime; // Added
 
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.mockito.ArgumentMatchers.any; // Added
+import static org.mockito.ArgumentMatchers.eq; // Added
+import static org.mockito.Mockito.when; // Added
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch; // Added
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath; // Added
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status; // Added
 
 @WebMvcTest(EnrollmentController.class)
 public class EnrollmentControllerTest {
 
     @Autowired
-    private MockMvc mockMvc;
+    private MockMvc mockMvc; // Keep for other tests if any
 
     @Autowired
-    private ObjectMapper objectMapper;
+    private ObjectMapper objectMapper; // Keep for other tests if any
 
     @MockBean
-    private CreateEnrollment createEnrollmentUseCase; // Existing mock from EnrollmentController
+    private CreateEnrollment createEnrollmentUseCase;
 
     @MockBean
-    private FindEnrollmentsByStudentId findEnrollmentsByStudentId; // Existing mock
+    private FindEnrollmentsByStudentId findEnrollmentsByStudentId;
 
     @MockBean
-    private InvoiceService invoiceService; // New mock for the added functionality
+    private UpdateEnrollmentMonthlyFee updateEnrollmentMonthlyFeeUseCase; // Added
 
-    private final String enrollmentId = "enroll-xyz";
-    private final String itemId = "item-123";
+    private final String existingEnrollmentId = "enroll-123";
+    private final String nonExistentEnrollmentId = "enroll-404";
 
     @Test
-    void shouldUpdateInvoiceItemAmountAndReturnOk() throws Exception {
-        InvoiceItemUpdateRequestDto requestDto = new InvoiceItemUpdateRequestDto();
-        BigDecimal newAmount = new BigDecimal("250.50");
-        requestDto.setNewAmount(newAmount);
+    void shouldUpdateMonthlyFeeAndReturnOk() throws Exception {
+        UpdateEnrollmentMonthlyFeeRequestDto requestDto = new UpdateEnrollmentMonthlyFeeRequestDto();
+        BigDecimal newFee = new BigDecimal("550.75");
+        requestDto.setMonthlyFee(newFee);
 
-        InvoiceItem updatedInvoiceItem = InvoiceItem.builder()
-                .id(itemId)
-                .description("Test Item Description")
-                .amount(newAmount)
-                .type(Types.TUITION) // Example type
+        Student student = Student.builder().id("student-001").name("John Doe").build();
+        ClassRoom classRoom = ClassRoom.builder().id("class-101").name("Math 101").year("2024").build();
+
+        Enrollment updatedEnrollment = Enrollment.builder()
+                .id(existingEnrollmentId)
+                .student(student)
+                .classroom(classRoom)
+                .monthlyFee(newFee)
+                .startDate(LocalDateTime.now().minusDays(10))
+                .status(Enrollment.Status.ACTIVE)
                 .build();
-        // Enrollment on InvoiceItem is not set, mapToInvoiceItemResponseDto handles null enrollment
 
-        when(invoiceService.updateInvoiceItemAmount(eq(itemId), eq(newAmount))).thenReturn(updatedInvoiceItem);
+        when(updateEnrollmentMonthlyFeeUseCase.execute(eq(existingEnrollmentId), eq(newFee)))
+                .thenReturn(updatedEnrollment);
 
-        mockMvc.perform(patch("/enrollments/{enrollmentId}/invoice-items/{itemId}", enrollmentId, itemId)
+        mockMvc.perform(patch("/enrollments/{enrollmentId}/monthly-fee", existingEnrollmentId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(itemId))
-                .andExpect(jsonPath("$.amount").value(newAmount.doubleValue()))
-                .andExpect(jsonPath("$.description").value("Test Item Description"))
-                .andExpect(jsonPath("$.type").value(Types.TUITION.toString()));
+                .andExpect(jsonPath("$.id").value(existingEnrollmentId))
+                .andExpect(jsonPath("$.monthlyFee").value(newFee.doubleValue())) // Compare as double
+                .andExpect(jsonPath("$.studentId").value(student.getId()))
+                .andExpect(jsonPath("$.classRoomId").value(classRoom.getId()))
+                .andExpect(jsonPath("$.status").value(Enrollment.Status.ACTIVE.toString()));
     }
 
     @Test
-    void shouldReturnNotFoundWhenUpdatingNonExistentInvoiceItem() throws Exception {
-        InvoiceItemUpdateRequestDto requestDto = new InvoiceItemUpdateRequestDto();
-        BigDecimal newAmount = new BigDecimal("100.00");
-        requestDto.setNewAmount(newAmount);
+    void shouldReturnNotFoundWhenUpdatingMonthlyFeeForNonExistentEnrollment() throws Exception {
+        UpdateEnrollmentMonthlyFeeRequestDto requestDto = new UpdateEnrollmentMonthlyFeeRequestDto();
+        BigDecimal newFee = new BigDecimal("500.00");
+        requestDto.setMonthlyFee(newFee);
 
-        when(invoiceService.updateInvoiceItemAmount(eq(itemId), eq(newAmount)))
-                .thenThrow(new ResourceNotFoundException("InvoiceItem not found with id: " + itemId));
+        when(updateEnrollmentMonthlyFeeUseCase.execute(eq(nonExistentEnrollmentId), eq(newFee)))
+                .thenThrow(new ResourceNotFoundException("Enrollment not found with id: " + nonExistentEnrollmentId));
 
-        mockMvc.perform(patch("/enrollments/{enrollmentId}/invoice-items/{itemId}", enrollmentId, itemId)
+        mockMvc.perform(patch("/enrollments/{enrollmentId}/monthly-fee", nonExistentEnrollmentId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isNotFound());
     }
 
     @Test
-    void shouldReturnBadRequestWhenUpdateAmountIsNull() throws Exception {
-        InvoiceItemUpdateRequestDto requestDto = new InvoiceItemUpdateRequestDto();
-        requestDto.setNewAmount(null); // Invalid
+    void shouldReturnBadRequestWhenMonthlyFeeIsNullInRequest() throws Exception {
+        UpdateEnrollmentMonthlyFeeRequestDto requestDto = new UpdateEnrollmentMonthlyFeeRequestDto();
+        requestDto.setMonthlyFee(null); // Invalid
 
-        mockMvc.perform(patch("/enrollments/{enrollmentId}/invoice-items/{itemId}", enrollmentId, itemId)
+        mockMvc.perform(patch("/enrollments/{enrollmentId}/monthly-fee", existingEnrollmentId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
-    void shouldReturnBadRequestWhenUpdateAmountIsZero() throws Exception {
-        InvoiceItemUpdateRequestDto requestDto = new InvoiceItemUpdateRequestDto();
-        requestDto.setNewAmount(BigDecimal.ZERO); // Invalid
+    void shouldReturnBadRequestWhenMonthlyFeeIsNegativeInRequest() throws Exception {
+        UpdateEnrollmentMonthlyFeeRequestDto requestDto = new UpdateEnrollmentMonthlyFeeRequestDto();
+        requestDto.setMonthlyFee(new BigDecimal("-100.00")); // Invalid
 
-        mockMvc.perform(patch("/enrollments/{enrollmentId}/invoice-items/{itemId}", enrollmentId, itemId)
+        mockMvc.perform(patch("/enrollments/{enrollmentId}/monthly-fee", existingEnrollmentId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isBadRequest());
     }
 
+    // Test for PositiveOrZero: Zero should be allowed.
     @Test
-    void shouldReturnBadRequestWhenUpdateAmountIsNegative() throws Exception {
-        InvoiceItemUpdateRequestDto requestDto = new InvoiceItemUpdateRequestDto();
-        requestDto.setNewAmount(new BigDecimal("-50.00")); // Invalid
+    void shouldAllowZeroMonthlyFeeWhenUpdating() throws Exception {
+        UpdateEnrollmentMonthlyFeeRequestDto requestDto = new UpdateEnrollmentMonthlyFeeRequestDto();
+        BigDecimal zeroFee = BigDecimal.ZERO;
+        requestDto.setMonthlyFee(zeroFee);
 
-        mockMvc.perform(patch("/enrollments/{enrollmentId}/invoice-items/{itemId}", enrollmentId, itemId)
+        Student student = Student.builder().id("student-002").name("Jane Zero").build();
+        ClassRoom classRoom = ClassRoom.builder().id("class-102").name("Art 101").year("2024").build();
+
+
+        Enrollment updatedEnrollmentWithZeroFee = Enrollment.builder()
+                .id(existingEnrollmentId)
+                .student(student)
+                .classroom(classRoom)
+                .monthlyFee(zeroFee)
+                .startDate(LocalDateTime.now().minusMonths(1))
+                .status(Enrollment.Status.ACTIVE)
+                .build();
+
+        when(updateEnrollmentMonthlyFeeUseCase.execute(eq(existingEnrollmentId), eq(zeroFee)))
+                .thenReturn(updatedEnrollmentWithZeroFee);
+
+        mockMvc.perform(patch("/enrollments/{enrollmentId}/monthly-fee", existingEnrollmentId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(existingEnrollmentId))
+                .andExpect(jsonPath("$.monthlyFee").value(zeroFee.doubleValue()));
     }
 }
