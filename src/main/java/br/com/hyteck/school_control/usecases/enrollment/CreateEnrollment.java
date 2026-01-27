@@ -18,8 +18,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
 import java.math.BigDecimal;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.HashSet;
+import java.util.Set;
 
 @Service
 @Validated
@@ -65,12 +68,25 @@ public class CreateEnrollment {
 
         }
 
+        Set<DayOfWeek> daysOfWeek = new HashSet<>();
+        if (requestDTO.daysOfWeek() != null) {
+            daysOfWeek.addAll(requestDTO.daysOfWeek());
+        }
+
+        BigDecimal monthlyFee = requestDTO.monthyFee();
+        if (monthlyFee == null) {
+            monthlyFee = calculateMonthlyFee(daysOfWeek.size());
+        }
+
         Enrollment newEnrollment = Enrollment.builder()
                 .student(student)
                 .classroom(classRoom)
                 .status(Enrollment.Status.ACTIVE)
-                .monthlyFee(requestDTO.monthyFee() != null ? requestDTO.monthyFee() : new BigDecimal(110)) // <<< Popula a mensalidade 110) // <<< Popula a mensalidade
-                .enrollmentFee(requestDTO.enrollmentFee() != null ? requestDTO.enrollmentFee() : new BigDecimal(30)) // <<< Popula a mensalidade 110) // <<< Popula a mensalidade
+                .monthlyFee(monthlyFee)
+                .enrollmentFee(requestDTO.enrollmentFee() != null ? requestDTO.enrollmentFee() : new BigDecimal(30))
+                .daysOfWeek(daysOfWeek)
+                .startTime(requestDTO.startTime())
+                .endTime(requestDTO.endTime())
                 .build();
 
         newEnrollment.validateEnrollmentRules(enrollmentRepository);
@@ -84,6 +100,13 @@ public class CreateEnrollment {
         return EnrollmentResponse.from(savedEnrollment);
     }
 
+
+    private BigDecimal calculateMonthlyFee(int daysCount) {
+        if (daysCount == 0) {
+            return new BigDecimal("110.00"); // Default standard
+        }
+        return new BigDecimal("55.00").multiply(new BigDecimal(daysCount));
+    }
 
     private void createAndSaveEnrollmentFeeInvoice(Enrollment enrollment, BigDecimal feeAmount, Responsible responsible) {
         if (responsible == null) {

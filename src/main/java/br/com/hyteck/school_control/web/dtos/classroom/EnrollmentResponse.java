@@ -2,12 +2,13 @@ package br.com.hyteck.school_control.web.dtos.classroom;
 
 import br.com.hyteck.school_control.models.classrooms.ClassRoom;
 import br.com.hyteck.school_control.models.classrooms.Enrollment;
-import br.com.hyteck.school_control.models.classrooms.ClassRoom;
-import br.com.hyteck.school_control.models.classrooms.Enrollment;
 import br.com.hyteck.school_control.models.classrooms.Student;
 
 import java.math.BigDecimal; // Added
+import java.time.DayOfWeek;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.Set;
 
 /**
  * DTO para retornar informações sobre uma matrícula.
@@ -22,7 +23,10 @@ public record EnrollmentResponse(
         BigDecimal monthlyFee, // Added
         LocalDateTime enrollmentDate,
         LocalDateTime endDate,
-        String status
+        String status,
+        Set<DayOfWeek> daysOfWeek,
+        LocalTime startTime,
+        LocalTime endTime
 ) {
     public static EnrollmentResponse from(Enrollment enrollment) {
         if (enrollment == null) {
@@ -40,7 +44,10 @@ public record EnrollmentResponse(
                 enrollment.getMonthlyFee(), // Added
                 enrollment.getStartDate(),
                 enrollment.getEndDate(),
-                enrollment.getStatus().name()
+                enrollment.getStatus().name(),
+                enrollment.getDaysOfWeek(),
+                enrollment.getStartTime(),
+                enrollment.getEndTime()
         );
     }
 }
