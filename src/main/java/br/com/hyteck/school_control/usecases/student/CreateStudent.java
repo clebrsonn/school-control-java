@@ -77,7 +77,7 @@ public class CreateStudent {
 
         Student savedStudent = studentRepository.save(studentToSave);
         logger.info("Estudante '{}' criado con sucesso. ID: {}", savedStudent.getName(), savedStudent.getId());
-        createEnrollment.execute(new EnrollmentRequest(savedStudent.getId(), requestDTO.classroom(), requestDTO.className(),  requestDTO.enrollmentFee(), requestDTO.monthyFee()));
+        createEnrollment.execute(new EnrollmentRequest(savedStudent.getId(), requestDTO.classroom(), requestDTO.className(),  requestDTO.enrollmentFee(), requestDTO.monthyFee(), null, null, null));
         return StudentResponse.from(savedStudent);
     }
 }

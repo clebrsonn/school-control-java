@@ -10,10 +10,14 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
+import java.time.DayOfWeek;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Entity
 @Table(name = "enrollments")
@@ -46,6 +50,16 @@ public class Enrollment extends AbstractModel {
 
     private BigDecimal enrollmentFee;
     private BigDecimal monthlyFee;
+
+    @ElementCollection(targetClass = DayOfWeek.class)
+    @Enumerated(EnumType.STRING)
+    @CollectionTable(name = "enrollment_days", joinColumns = @JoinColumn(name = "enrollment_id"))
+    @Column(name = "day_of_week")
+    @Builder.Default
+    private Set<DayOfWeek> daysOfWeek = new HashSet<>();
+
+    private LocalTime startTime;
+    private LocalTime endTime;
 
     @OneToMany(mappedBy = "enrollment", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default
